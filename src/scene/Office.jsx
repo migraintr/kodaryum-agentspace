@@ -51,7 +51,7 @@ function WallScreen({ type, color, x, y, z, w, h, dark }) {
 }
 
 // Oda zeminleri: referanstaki gibi parlak mermer karo ve sıcak ahşap parke
-const WOOD = { yonetim: 'warm', pazarlama: 'warm', mola: 'light' }
+const WOOD = { yonetim: 'warm', pazarlama: 'warm' }
 function Floors({ dark }) {
   const floors = useMemo(
     () =>

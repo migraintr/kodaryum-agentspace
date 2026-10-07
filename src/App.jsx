@@ -1,10 +1,9 @@
 // KKM — Kodaryum AgentSpace ("dijital ikiz" arayüzü)
-// Üst bar · tam ekran ofis (gerçekçi fotoğraf görünümü ya da canlı 3B maket) · soldan açılan menü
+// Üst bar · tam ekran ofis (canlı 3B maket) · soldan açılan menü
 // (ekranlar: görevler, departmanlar, projeler…) · sağ altta ADA ile sohbet balonu
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CircleCheck, Info, Maximize2, Tags, TriangleAlert } from 'lucide-react'
-import PhotoOffice from './office/PhotoOffice.jsx'
+import { CircleCheck, Info, Maximize2, TriangleAlert } from 'lucide-react'
 import { useStore } from './store.js'
 import { ChatWidget } from './ui/ChatWidget.jsx'
 import { Logo } from './ui/kit.jsx'
@@ -28,21 +27,13 @@ function SceneLoading() {
   )
 }
 
-// Ofisin sağ üstü: etiket görünürlüğü (sade / tümü) ve odaya odaklanınca "Genel görünüm"
+// Odaya odaklanınca ofisin sağ üstünde "Genel görünüm"
 function OfficeControls() {
   const roomId = useStore((s) => s.roomId)
   const focusRoom = useStore((s) => s.focusRoom)
-  const labels = useStore((s) => s.labels)
-  const toggleLabels = useStore((s) => s.toggleLabels)
-  const mode = useStore((s) => s.officeMode)
   const btn = 'pointer-events-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-white/20 bg-[#0d2659]/70 px-3.5 text-[12.5px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#0d2659]/95'
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-20 flex gap-2">
-      {mode === 'photo' && (
-        <button type="button" onClick={toggleLabels} className={btn} title="Kişi etiketleri: sade görünümde yalnızca odaya odaklanınca görünür">
-          <Tags size={14} /> {labels === 'all' ? 'Etiketler: tümü' : 'Etiketler: sade'}
-        </button>
-      )}
       <AnimatePresence>
         {roomId && (
           <motion.button initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} type="button" onClick={() => focusRoom(null)} className={btn}>
@@ -81,7 +72,6 @@ function Toast() {
 export default function App() {
   const stageRef = useRef(null)
   const view = useStore((s) => s.view)
-  const mode = useStore((s) => s.officeMode)
 
   useEffect(() => {
     const { start, stop } = useStore.getState()
@@ -113,16 +103,12 @@ export default function App() {
 
       {/* Ofis, üst barın altındaki alanın tamamını doldurur */}
       <main className="relative min-h-0 flex-1 overflow-hidden bg-[#0b1530]">
-        {mode === 'photo' ? (
-          <PhotoOffice />
-        ) : (
-          <div className="absolute inset-0">
-            <Suspense fallback={<SceneLoading />}>
-              <Scene3D stageRef={stageRef} />
-            </Suspense>
-            <div ref={stageRef} className="pointer-events-none absolute inset-3" />
-          </div>
-        )}
+        <div className="absolute inset-0">
+          <Suspense fallback={<SceneLoading />}>
+            <Scene3D stageRef={stageRef} />
+          </Suspense>
+          <div ref={stageRef} className="pointer-events-none absolute inset-3" />
+        </div>
         <OfficeControls />
         <Toast />
 

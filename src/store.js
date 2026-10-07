@@ -143,17 +143,11 @@ export const useStore = create((set, get) => ({
   navOpen: false,
   theme: initialTheme(),
   lighting: initialLighting(),
-  labels: load('kkm:labels', 'all') === 'auto' ? 'auto' : 'all', // auto (sade): kişi etiketleri yalnızca odaya odaklanınca/yakınlaşınca
   userId: initialUser(),
   view: 'genel', // sol menüde seçili ekran ('genel' = ofis)
-  officeMode: load('kkm:office', 'photo') === '3d' ? '3d' : 'photo', // photo: gerçekçi ofis · 3d: canlı 3B maket
   projectLeads: loadLeads(),
 
   setView: (view) => set({ view }),
-  setOfficeMode: (officeMode) => {
-    save('kkm:office', officeMode)
-    set({ officeMode })
-  },
   setProjectLead: (projectId, personId) =>
     set((s) => {
       const projectLeads = { ...s.projectLeads, [projectId]: personId }
@@ -166,12 +160,6 @@ export const useStore = create((set, get) => ({
     save('kkm:user', userId)
     set({ userId })
   },
-  toggleLabels: () => {
-    const labels = get().labels === 'all' ? 'auto' : 'all'
-    save('kkm:labels', labels)
-    set({ labels })
-  },
-
   // Işığı döndür: gündüz → akşam → gece → gündüz (koyu arayüz yalnızca gecede)
   cycleLighting: () => {
     const lighting = LIGHT_ORDER[(LIGHT_ORDER.indexOf(get().lighting) + 1) % LIGHT_ORDER.length]
@@ -232,7 +220,7 @@ export const useStore = create((set, get) => ({
         const taken = []
         const goal = shortGoal(text)
         for (const b of targets) {
-          const pool = AGENTS.filter((p) => DEPT_BY_ID.get(p.dept).board === b.id && !p.onBreak)
+          const pool = AGENTS.filter((p) => DEPT_BY_ID.get(p.dept).board === b.id)
           if (!pool.length) continue
           const owner = pool
             .map((p) => ({ p, n: loadOf([...s.tasks, ...pending], p.id) + taken.filter((x) => x === p.id).length }))

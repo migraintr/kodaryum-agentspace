@@ -1,11 +1,10 @@
 // Üst bar (referans tasarım): menü · logo · KODARYUM | AgentSpace · slogan · canlı sayaçlar · saat · tema · profil
-import { Box, Image as ImageIcon, Menu, Moon, Sun, Sunset, UserRound } from 'lucide-react'
+import { Menu, Moon, Sun, Sunset, UserRound } from 'lucide-react'
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { Avatar, Logo, useNow } from './kit.jsx'
 
 const TOTAL = PEOPLE.length
-const BREAK = PEOPLE.filter((p) => p.onBreak).length
 
 function Pill({ children, title }) {
   return (
@@ -59,32 +58,6 @@ function AccountButton() {
   )
 }
 
-// Ofis görünümü: fotogerçekçi kat görseli ya da canlı 3B maket
-function ModeSwitch() {
-  const mode = useStore((s) => s.officeMode)
-  const setMode = useStore((s) => s.setOfficeMode)
-  const item = (id, Icon, label) => (
-    <button
-      type="button"
-      onClick={() => setMode(id)}
-      aria-pressed={mode === id}
-      title={id === 'photo' ? 'Gerçekçi ofis görünümü' : 'Canlı 3B maket'}
-      className={`flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-[12.5px] font-semibold transition-colors ${
-        mode === id ? 'bg-white text-[#13234d] shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-      }`}
-    >
-      <Icon size={14} />
-      <span className="hidden md:inline">{label}</span>
-    </button>
-  )
-  return (
-    <div className="flex shrink-0 gap-0.5 rounded-lg border border-slate-300/80 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-900">
-      {item('photo', ImageIcon, 'Gerçekçi')}
-      {item('3d', Box, '3B')}
-    </div>
-  )
-}
-
 export function TopBar() {
   const toggleNav = useStore((s) => s.toggleNav)
   const lighting = useStore((s) => s.lighting)
@@ -128,16 +101,11 @@ export function TopBar() {
             <UserRound size={15} className="text-[#1fae7a]" strokeWidth={2.4} />
             {TOTAL} ÇALIŞAN
           </Pill>
-          <Pill title="Masasında çalışan ajanlar">
+          <Pill title="Görevde olan ajanlar">
             <i className="h-2.5 w-2.5 rounded-full bg-[#22c08a]" />
-            {TOTAL - BREAK} ÇALIŞIYOR
-          </Pill>
-          <Pill title="Mola Odası'ndaki ajanlar">
-            <i className="h-2.5 w-2.5 rounded-full bg-[#f5a020]" />
-            {BREAK} MOLADA
+            {TOTAL} ÇALIŞIYOR
           </Pill>
         </div>
-        <ModeSwitch />
         <span className="hidden sm:block">
           <Clock />
         </span>

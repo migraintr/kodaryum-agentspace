@@ -1,15 +1,14 @@
 // Departmanlar: ekip nabzı (eski alt paneldeki "Ekip Nabzı") — yük, verimlilik, sağlık, ekip üyeleri ve görevleri.
-import { Coffee, Network } from 'lucide-react'
+import { Network } from 'lucide-react'
 import { DEPARTMENTS, PEOPLE, teamOf } from '../data.js'
 import { HEALTH, agentTask, useStore } from '../store.js'
 import { ICONS, Avatar, alpha } from '../ui/kit.jsx'
 import { Chip, ViewShell } from './shell.jsx'
 
-const DEPTS = DEPARTMENTS.filter((d) => d.id !== 'yonetim')
-const BREAK = PEOPLE.filter((p) => p.onBreak)
+const DEPTS = DEPARTMENTS.filter((d) => d.board)
 
 function Member({ person, color, task }) {
-  const status = person.onBreak ? ['Molada', '#f59e0b'] : task?.status === 'pending' ? ['Onay bekliyor', '#64748b'] : task ? ['Görevde', '#10b981'] : ['Müsait', '#94a3b8']
+  const status = task?.status === 'pending' ? ['Onay bekliyor', '#64748b'] : task ? ['Görevde', '#10b981'] : ['Müsait', '#94a3b8']
   return (
     <li className="flex items-center gap-2.5">
       <Avatar name={person.name} color={color} size={28} />
@@ -28,11 +27,10 @@ function DeptCard({ dept }) {
   const roomId = useStore((s) => s.roomId)
   const focusRoom = useStore((s) => s.focusRoom)
   const setView = useStore((s) => s.setView)
-  const Icon = dept.id === 'mola' ? Coffee : ICONS[dept.icon]
-  const isBreak = dept.id === 'mola'
+  const Icon = ICONS[dept.icon]
   const board = boards.find((b) => b.id === dept.board)
-  const team = isBreak ? BREAK : teamOf(dept.id)
-  const busy = team.filter((p) => !p.onBreak && agentTask(tasks, p.id)?.status === 'active').length
+  const team = teamOf(dept.id)
+  const busy = team.filter((p) => agentTask(tasks, p.id)?.status === 'active').length
   const health = board ? HEALTH[board.health] : null
 
   return (
@@ -43,7 +41,7 @@ function DeptCard({ dept }) {
         </span>
         <div className="min-w-0 flex-1 leading-tight">
           <h2 className="text-[14.5px] font-semibold text-ink">{dept.name}</h2>
-          <p className="text-[11px] text-ink-4">{isBreak ? `${team.length} kişi molada` : `${busy}/${team.length} ajan görevde`}</p>
+          <p className="text-[11px] text-ink-4">{`${busy}/${team.length} ajan görevde`}</p>
         </div>
         {health && <Chip color={health.color}>{health.label}</Chip>}
         <button

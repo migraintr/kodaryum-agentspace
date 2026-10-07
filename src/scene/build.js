@@ -204,9 +204,9 @@ export function buildOffice(theme = 'dark') {
   }
 
   for (const r of ROOMS) {
-    // Arka bölme (orta/ön sıra): kapı boşluğu sağda (Mola Alanı'nda solda); şerit oda renginde
+    // Arka bölme (orta/ön sıra): kapı boşluğu sağda (Toplantı Odası'nda solda); şerit oda renginde
     if (r.row > 0) {
-      const door = r.id === 'mola' ? [r.x0 + 0.6, r.x0 + 1.8] : [r.x1 - 1.9, r.x1 - 0.7]
+      const door = r.id === 'toplanti' ? [r.x0 + 0.6, r.x0 + 1.8] : [r.x1 - 1.9, r.x1 - 0.7]
       wall('x', r.x0, r.x1, r.z0, WALL_H, r.color, [door], true)
     }
     // Sol bölme: önde kapı boşluğu
@@ -318,31 +318,18 @@ export function buildOffice(theme = 'dark') {
   plant(X(-4.6), Z(2.9))
   plant(X(8.35), Z(-1.3), 0.9)
 
-  r = R.mola
-  panel('logo', r.color, r.cx - 0.5, 0.98, r.face, 3.0, 0.8)
-  box(r.cx + 2.7, 0.45, r.z0 + 0.5, 2.4, 0.9, 0.6, '#1e293b') // mutfak tezgâhı
-  box(r.cx + 2.7, 0.915, r.z0 + 0.5, 2.44, 0.03, 0.64, PAL.light)
-  box(r.cx + 1.9, 1.1, r.z0 + 0.45, 0.34, 0.36, 0.3, '#0b1020') // kahve makinesi
-  neon(r.cx + 1.9, 1.14, r.z0 + 0.605, 0.08, 0.08, 0.01, '#34d399')
-  for (let i = 0; i < 3; i++) cyl(r.cx + 2.5 + i * 0.2, 0.98, r.z0 + 0.55, 0.09, 0.1, 0.09, NOTES[i])
-  cyl(r.x0 + 2.1, 0.045, r.cz + 0.6, 3.6, 0.012, 2.8, '#2e1065') // halı
-  box(r.x0 + 0.75, 0.24, r.cz + 0.6, 0.85, 0.36, 2.6, '#3f3a8c') // kanepe
-  box(r.x0 + 0.39, 0.56, r.cz + 0.6, 0.16, 0.62, 2.6, '#3f3a8c')
-  for (const s of [-1, 1]) box(r.x0 + 0.75, 0.4, r.cz + 0.6 + s * 1.3, 0.85, 0.5, 0.16, '#363180')
-  for (const s of [-1, 1]) box(r.x0 + 0.8, 0.45, r.cz + 0.6 + s * 0.6, 0.66, 0.06, 1.1, '#4c46a8')
-  box(r.x0 + 2.2, 0.33, r.cz + 0.6, 0.8, 0.05, 1.3, PAL.wood) // sehpa
-  box(r.x0 + 2.2, 0.16, r.cz + 0.6, 0.7, 0.3, 1.2, '#4a3628')
-  box(r.x0 + 3.5, 0.26, r.cz + 0.6, 0.8, 0.36, 0.9, '#3f3a8c') // berjer
-  box(r.x0 + 3.85, 0.55, r.cz + 0.6, 0.14, 0.6, 0.9, '#3f3a8c')
-  box(r.cx + 2.2, 0.78, r.cz + 1.5, 1.4, 0.16, 0.8, '#14532d') // langırt
-  box(r.cx + 2.2, 0.35, r.cz + 1.5, 1.2, 0.7, 0.12, PAL.deskLeg)
-  for (let i = 0; i < 6; i++) {
-    box(r.cx + 1.68 + i * 0.21, 0.9, r.cz + 1.5, 0.025, 0.025, 1.1, PAL.metal)
-    box(r.cx + 1.68 + i * 0.21, 0.88, r.cz + 1.5 + (i % 2 ? 0.15 : -0.15), 0.06, 0.12, 0.06, i % 2 ? '#ef4444' : '#3b82f6')
-  }
-  ball(r.cx + 0.4, 0.25, r.z1 - 1.0, 0.8, 0.5, 0.8, '#a21caf') // armut koltuk
+  r = R.toplanti // uzun toplantı masası, sandalyeler, sunum ekranı
+  panel('logo', r.color, r.cx, 1.25, r.face, 3.2, 1.2)
+  box(r.cx, 0.74, r.cz + 0.3, 4.2, 0.06, 1.4, PAL.walnut)
+  for (const s of [-1.6, 1.6]) box(r.cx + s, 0.36, r.cz + 0.3, 0.12, 0.72, 1.1, PAL.deskLeg)
+  for (let i = 0; i < 4; i++)
+    for (const s of [-1, 1]) {
+      const x = r.cx - 1.5 + i
+      box(x, 0.45, r.cz + 0.3 + s * 1.0, 0.48, 0.08, 0.46, '#334155')
+      box(x, 0.78, r.cz + 0.3 + s * 1.24, 0.46, 0.6, 0.07, '#334155')
+    }
   tallPlant(r.x1 - 0.6, r.z1 - 0.6)
-  plant(r.x1 - 0.5, r.cz - 0.4, 0.8)
+  plant(r.x0 + 0.6, r.z1 - 0.6, 0.8)
 
   r = R.operasyon
   panel('ops', r.color, r.cx - 0.3, 0.98, r.face, 3.0, 0.8)

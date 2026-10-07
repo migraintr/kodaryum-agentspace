@@ -391,7 +391,7 @@ export const marbleTexture = (dark) =>
     for (let p = 0; p <= h; p += tile) line(g, 0, p, w, p)
   }, { repeat: true })
 
-/** Sıcak tonlu ahşap parke (CEO ofisi, pazarlama, mola) */
+/** Sıcak tonlu ahşap parke (CEO ofisi, pazarlama) */
 export const woodTexture = (tone = 'warm', dark = false) =>
   canvasTexture(`wood:${tone}:${dark}`, 512, 512, (g, w, h) => {
     const r = rng(tone === 'warm' ? 23 : 29)

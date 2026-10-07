@@ -44,12 +44,11 @@ export const DESK_SPOTS = [] // { room, x, z } masa merkezi
 export const PLACES = [] // { person, room, x, z, standing } çalışanın durduğu/oturduğu nokta
 
 for (const room of ROOMS) {
-  // Moladaki ajanların masası boş kalır (sandalye duruyor)
   const team = PEOPLE.filter((p) => p.dept === room.id && p.role !== 'CEO')
   ;(DESKS[room.id] ?? []).forEach(([dx, dz], i) => {
     const spot = { room, x: room.cx + dx, z: room.cz + dz }
     DESK_SPOTS.push(spot)
-    if (team[i] && !team[i].onBreak) PLACES.push({ person: team[i], room, x: spot.x, z: spot.z + SEAT_OFFSET, standing: false })
+    if (team[i]) PLACES.push({ person: team[i], room, x: spot.x, z: spot.z + SEAT_OFFSET, standing: false })
   })
 }
 PLACES.push({ person: PEOPLE.find((p) => p.role === 'CEO'), room: ceoRoom, x: SUITE.x, z: SUITE.z - 2.5, standing: true })

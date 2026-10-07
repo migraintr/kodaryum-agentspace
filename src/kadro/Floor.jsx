@@ -1,4 +1,4 @@
-// Tam kat: 7 oda (cam bölmeli), her masada çalışan, CEO ofisi, mola odası. ?kadro=kat
+// Tam kat: 7 oda (cam bölmeli), her masada çalışan, CEO ofisi, toplantı odası. ?kadro=kat
 import { Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Environment, OrbitControls, RoundedBox } from '@react-three/drei'
@@ -17,7 +17,7 @@ const ROOMS = [
   { id: 'tasarim', x: 4, z: -7, w: 8, d: 6, floor: '#bdb6aa', desks: [[-2.2, -1.2], [0.4, -1.2], [-0.9, 1.3]] },
   { id: 'pazarlama', x: -12, z: 1, w: 6, d: 6, floor: '#9a7454', desks: [[-1.4, -1.2], [1.4, -1.2], [-1.4, 1.3], [1.4, 1.3]] },
   { id: 'arastirma', x: -6, z: 1, w: 6, d: 6, floor: '#bdb6aa', desks: [[-1.4, -1.2], [1.4, -1.2], [0, 1.3]] },
-  { id: 'mola', x: 0, z: 1, w: 6, d: 6, floor: '#a88a68', lounge: true },
+  { id: 'toplanti', x: 0, z: 1, w: 6, d: 6, floor: '#bdb6aa', meeting: true },
   { id: 'operasyon', x: 6, z: 1, w: 6, d: 6, floor: '#bdb6aa', desks: [[-1.4, -1.2], [1.4, -1.2]] },
 ]
 
@@ -100,31 +100,21 @@ function Room({ r, start }) {
         </group>
       )}
 
-      {r.lounge && (
+      {r.meeting && (
         <group>
-          {/* mutfak tezgâhı */}
-          <mesh position={[cx, 0.46, r.z + 0.45]} castShadow receiveShadow>
-            <boxGeometry args={[4.6, 0.92, 0.7]} />
-            <meshStandardMaterial color="#25272b" roughness={0.4} />
-          </mesh>
-          <mesh position={[cx, 0.94, r.z + 0.45]} receiveShadow>
-            <boxGeometry args={[4.7, 0.04, 0.75]} />
-            <meshStandardMaterial color="#e7e3dc" roughness={0.3} />
-          </mesh>
-          {/* yemek masası */}
-          <mesh position={[cx - 1.3, 0.74, cz + 0.6]} castShadow receiveShadow>
-            <boxGeometry args={[0.9, 0.05, 2]} />
-            <meshStandardMaterial color="#9c7650" roughness={0.5} />
-          </mesh>
-          {/* kanepe */}
-          <RoundedBox args={[2.2, 0.75, 0.9]} radius={0.15} position={[cx + 1.4, 0.37, cz + 1.9]} castShadow receiveShadow>
-            <meshStandardMaterial color="#c9c6c1" roughness={0.9} />
+          <RoundedBox args={[1.2, 0.06, 3.4]} radius={0.02} position={[cx, 0.75, cz]} castShadow receiveShadow>
+            <meshStandardMaterial color="#e9e7e2" roughness={0.35} />
           </RoundedBox>
-          <Character look={{ model: 'brunette' }} action="idle" phase={0.2} position={[cx + 0.1, 0, cz - 0.7]} rotation-y={1.2} />
-          <Character look={{ model: 'avatarsdk' }} action="agree" phase={0.7} position={[cx + 1.0, 0, cz - 0.5]} rotation-y={-1.6} />
+          {[-1.1, 0, 1.1].flatMap((dz) =>
+            [-1, 1].map((s) => <Chair key={`${dz}${s}`} position={[cx + s * 0.95, 0, cz + dz]} rotation-y={(s * Math.PI) / 2} />),
+          )}
+          <mesh position={[cx, 1.5, r.z + 0.12]} castShadow>
+            <boxGeometry args={[2.6, 1.4, 0.06]} />
+            <meshStandardMaterial color="#111318" roughness={0.3} />
+          </mesh>
         </group>
       )}
-      {!r.lounge && !r.ceo && <Plant position={[r.x + r.w - 0.5, 0, r.z + 0.5]} />}
+      {!r.meeting && !r.ceo && <Plant position={[r.x + r.w - 0.5, 0, r.z + 0.5]} />}
     </group>
   )
 }
