@@ -143,7 +143,7 @@ export const useStore = create((set, get) => ({
   navOpen: false,
   theme: initialTheme(),
   lighting: initialLighting(),
-  labels: load('kkm:labels', 'auto') === 'all' ? 'all' : 'auto', // auto: kişi etiketleri yalnızca odaya odaklanınca/yakınlaşınca
+  labels: load('kkm:labels', 'all') === 'auto' ? 'auto' : 'all', // auto (sade): kişi etiketleri yalnızca odaya odaklanınca/yakınlaşınca
   userId: initialUser(),
   view: 'genel', // sol menüde seçili ekran ('genel' = ofis)
   officeMode: load('kkm:office', 'photo') === '3d' ? '3d' : 'photo', // photo: gerçekçi ofis · 3d: canlı 3B maket
