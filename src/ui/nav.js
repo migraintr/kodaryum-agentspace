@@ -1,17 +1,15 @@
-// Sol menü öğeleri; view: tıklanınca açılan ekran ('genel' = 3D ofis)
+// Sol menü öğeleri; view: tıklanınca açılan ekran ('genel' = ofis). Rozet sayıları Sidebar'da canlı hesaplanır.
 import {
   BookOpen, Bot, BrainCircuit, Building2, ChartLine, FileChartColumn, Folder, FolderKanban, Globe, LayoutDashboard,
   ListChecks, Network, Puzzle, Settings, SquareTerminal, Workflow,
 } from 'lucide-react'
-import { OPEN_TASKS } from '../data.js'
-
 export const NAV = [
   { label: 'Genel Bakış', icon: LayoutDashboard, view: 'genel' },
   { label: 'Şirketim', icon: Building2, view: 'sirketim' },
   { label: 'Departmanlar', icon: Network, view: 'departmanlar' },
   { label: 'AI Çalışanlar', icon: Bot, view: 'ajanlar' },
   { label: 'Projeler', icon: FolderKanban, view: 'projeler' },
-  { label: 'Görevler', icon: ListChecks, view: 'gorevler', count: OPEN_TASKS },
+  { label: 'Görevler', icon: ListChecks, view: 'gorevler' },
   { label: 'Workflow’lar', icon: Workflow, view: 'workflow' },
   { label: 'Bilgi Bankası', icon: BookOpen, view: 'bilgi' },
   { label: 'Memory', icon: BrainCircuit, view: 'memory' },

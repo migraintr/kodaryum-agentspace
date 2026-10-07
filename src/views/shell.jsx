@@ -52,6 +52,26 @@ export function Chip({ color, children, className = '' }) {
   )
 }
 
+/** Segment sekmeleri: items = [[id, etiket], …] */
+export function Tabs({ value, onChange, items }) {
+  return (
+    <div className="flex rounded-lg border border-fg/[0.1] bg-fg/[0.03] p-0.5">
+      {items.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          className={`cursor-pointer rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+            value === id ? 'bg-panel text-ink shadow-sm ring-1 ring-fg/[0.08]' : 'text-ink-4 hover:text-ink-2'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function SearchInput({ value, onChange, placeholder }) {
   return (
     <input

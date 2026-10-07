@@ -119,33 +119,6 @@ body,
   50% { box-shadow: 0 3px 8px rgb(20 90 220 / .35), 0 0 0 7px rgb(56 152 255 / 0); }
 }
 
-/* Komuta Hattı: dönen renk geçişli çerçeve (odaklanınca hızlanır ve parlar) */
-@property --kkm-a {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-.kkm-console {
-  background: conic-gradient(from var(--kkm-a), #8a4cf0, #2f80ed, #22c1ee, #34d399, #8a4cf0);
-  animation: kkm-spin 7s linear infinite;
-}
-.kkm-console:focus-within {
-  animation-duration: 2.4s;
-  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.12), 0 14px 34px -12px rgb(59 130 246 / 0.6);
-}
-@keyframes kkm-spin {
-  to { --kkm-a: 360deg; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .kkm-console { animation: none; }
-}
-
-/* Marka kartındaki dalgalar */
-@keyframes kkm-wave {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
 .no-scrollbar {
   scrollbar-width: none;
 }

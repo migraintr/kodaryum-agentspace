@@ -1,12 +1,11 @@
 // KKM — Kodaryum AgentSpace ("dijital ikiz" arayüzü)
-// Üst bar · tam genişlikte ofis (gerçekçi fotoğraf görünümü ya da canlı 3B maket) · alt paneller
-// (kurucu ↔ ADA, görev dağıtımı, departmanlar) · soldan açılan menü · ADA sohbet/plan penceresi
+// Üst bar · tam ekran ofis (gerçekçi fotoğraf görünümü ya da canlı 3B maket) · soldan açılan menü
+// (ekranlar: görevler, departmanlar, projeler…) · sağ altta ADA ile sohbet balonu
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CircleCheck, Info, Maximize2, TriangleAlert } from 'lucide-react'
 import PhotoOffice from './office/PhotoOffice.jsx'
 import { useStore } from './store.js'
-import { Dock } from './ui/Dock.jsx'
 import { ChatWidget } from './ui/ChatWidget.jsx'
 import { Logo } from './ui/kit.jsx'
 import { NAV } from './ui/nav.js'
@@ -85,17 +84,16 @@ export default function App() {
   useEffect(() => {
     const { start, stop } = useStore.getState()
     start()
-    // ESC: sırasıyla sohbeti, yazma alanını, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: yeni hedef.
+    // ESC: sırasıyla sohbeti, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: ADA ile sohbeti aç.
     const onKey = (e) => {
       const s = useStore.getState()
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        s.setComposing(true)
+        s.openChat()
         return
       }
       if (e.key !== 'Escape') return
       if (s.chatOpen) s.closeChat()
-      else if (s.composing) s.setComposing(false)
       else if (s.navOpen) s.closeNav()
       else if (s.view !== 'genel') s.setView('genel')
       else s.focusRoom(null)
@@ -108,11 +106,11 @@ export default function App() {
   }, [])
 
   return (
-    <div className="app-bg flex h-full flex-col overflow-y-auto lg:overflow-hidden">
+    <div className="app-bg flex h-full flex-col overflow-hidden">
       <TopBar />
 
-      {/* Ofis kalan alanı tamamen doldurur (masaüstünde tam genişlik); alt bölüm ekrana göre 140–192 px arasında kalır */}
-      <main className="relative h-[82.5vw] max-h-[60vh] min-h-[260px] shrink-0 overflow-hidden bg-[#0b1530] lg:h-auto lg:max-h-none lg:min-h-0 lg:flex-1">
+      {/* Ofis, üst barın altındaki alanın tamamını doldurur */}
+      <main className="relative min-h-0 flex-1 overflow-hidden bg-[#0b1530]">
         {mode === 'photo' ? (
           <PhotoOffice />
         ) : (
@@ -134,7 +132,6 @@ export default function App() {
         )}
       </main>
 
-      <Dock />
       <Sidebar />
       <ChatWidget />
     </div>

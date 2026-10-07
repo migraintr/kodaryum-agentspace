@@ -5,13 +5,14 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { CEO, DEPARTMENTS, DEPT_BY_ID, PERSON_BY_ID, teamOf } from '../data.js'
 import { agentTask, useStore } from '../store.js'
 import {
-  ADA_TO_HUB, BUBBLE, COFFEE, CORRIDOR_SIGNS, DESIGN_SCREEN, FLOW, HEADS, HUB, KLOGO, MAP, PLAQUES, PLATE, RACKS, ROOMS, TAGS, box, routeTo,
+  ADA_TO_HUB, BUBBLE, COFFEE, CORRIDOR_SIGNS, DESIGN_SCREEN, HEADS, KLOGO, MAP, PLAQUES, PLATE, RACKS, ROOMS, TAGS, box, routeTo,
 } from './photoLayout.js'
 import LivingPlate from './LivingPlate.jsx'
 import './photo.css'
 
 const { w: PW, h: PH } = PLATE
 const MAX_Z = 2.4
+const KLOGO_H = 54 // CEO ofisi arka duvarındaki logo yüksekliği (dünya birimi)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 // Kararlı sözde rastgele (etkilerin gecikmeleri her açılışta aynı)
 function rng(seed) {
@@ -117,7 +118,7 @@ const Effects = memo(function Effects() {
       {leds.map((l, i) => (
         <i key={i} className="po-led" style={{ left: l.left, top: l.top, '--c': l.c, '--d': l.d, '--dl': l.dl }} />
       ))}
-      <i className="po-kglow" style={{ left: KLOGO[0] - 70, top: KLOGO[1] - 60 }} />
+      <img src="/logo.svg" alt="Kodaryum" draggable={false} className="po-klogo" style={{ left: KLOGO[0] - KLOGO_H * 0.43, top: KLOGO[1] - KLOGO_H / 2, height: KLOGO_H }} />
       <i className="po-scr" style={{ left: DESIGN_SCREEN.x, top: DESIGN_SCREEN.y, width: DESIGN_SCREEN.w, height: DESIGN_SCREEN.h }}>
         <i />
       </i>
@@ -137,27 +138,9 @@ const Effects = memo(function Effects() {
       {COFFEE.flatMap(([x, y], m) =>
         [0, 1, 2, 3].map((w) => <i key={`${m}${w}`} className="po-steam" style={{ left: x - 6, top: y - 10, '--dl': `${(w * 0.65 + m * 0.3).toFixed(2)}s` }} />),
       )}
-      {[0, 1, 2].map((k) => (
-        <i key={k} className="po-pdot" style={{ '--dl': `${(k * 0.87).toFixed(2)}s` }} />
-      ))}
     </div>
   )
 })
-
-// Koridor ışık akışı + turuncu dağıtım merkezi (görev dağıtılırken hızlanır)
-function Hub({ busy }) {
-  return (
-    <div className={`po-layer po-fx po-flows ${busy ? 'busy' : ''}`}>
-      {[0, 1, 2, 3].map((k) => (
-        <i key={k} className="po-flow" style={{ left: FLOW.x0 - 60, '--dl': `${(-k * 0.925).toFixed(2)}s` }} />
-      ))}
-      <i className="po-hubglow" style={{ left: HUB[0] - 45, top: HUB[1] - 45, opacity: busy ? 1 : 0.55 }} />
-      {[0, 1, 2].map((k) => (
-        <i key={k} className="po-hub" style={{ left: HUB[0] - 17, top: HUB[1] - 17, '--dl': `${k * 0.8}s`, opacity: busy ? 1 : 0.5 }} />
-      ))}
-    </div>
-  )
-}
 
 // ─── Etiketler ───────────────────────────────────────────────────────────────
 function Plaque({ id, active, onFocus }) {
@@ -466,7 +449,6 @@ export default function PhotoOffice() {
       <div ref={camRef} className="po-cam" style={{ opacity: loaded ? 1 : 0, transition: 'opacity .6s' }}>
         <LivingPlate scaleRef={scaleRef} busyRef={busyRef} nodRef={nodRef} talkRef={talkRef} onLoad={() => setLoaded(true)} />
         <Effects />
-        <Hub busy={flights.length > 0 || typing} />
 
         {/* oda vurgusu: seçili/üzerinde olunan oda çerçevelenir, seçimde diğerleri kararır */}
         <svg className="po-layer" viewBox={`0 0 ${PW} ${PH}`}>

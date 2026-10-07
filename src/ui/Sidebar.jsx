@@ -42,6 +42,13 @@ export function Sidebar() {
   const user = USER_BY_ID.get(useStore((s) => s.userId))
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
+  const openTasks = useStore((s) => s.tasks.filter((t) => t.status !== 'done').length)
+  const avg = useStore((s) => {
+    const a = s.tasks.filter((t) => t.status === 'active')
+    return a.length ? Math.round(a.reduce((n, t) => n + t.progress, 0) / a.length) : 100
+  })
+  const warnings = useStore((s) => s.summary.warnings)
+  const badge = { gorevler: openTasks }
 
   return (
     <AnimatePresence>
@@ -68,6 +75,18 @@ export function Sidebar() {
             </div>
 
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
+              <div className="mb-2 grid grid-cols-3 gap-1.5 text-center">
+                {[
+                  ['Açık görev', openTasks, '#2f80ed'],
+                  ['Ortalama', `%${avg}`, '#10b981'],
+                  ['Uyarı', warnings, warnings ? '#f59e0b' : '#94a3b8'],
+                ].map(([k, v, c]) => (
+                  <div key={k} className="rounded-lg border border-fg/[0.07] bg-fg/[0.03] py-1.5">
+                    <p className="font-mono text-[14px] font-semibold" style={{ color: c }}>{v}</p>
+                    <p className="text-[9.5px] text-ink-4">{k}</p>
+                  </div>
+                ))}
+              </div>
               <nav className="space-y-0.5">
                 {NAV.map((item) => {
                   const Icon = item.icon
@@ -87,7 +106,7 @@ export function Sidebar() {
                       {active && <span className="absolute top-1.5 bottom-1.5 left-0 w-[3px] rounded-r bg-sky-500" />}
                       <Icon size={15} className={active ? 'text-sky-600 dark:text-sky-300' : 'text-slate-500'} />
                       <span className="flex-1 text-left">{item.label}</span>
-                      {item.count ? <span className="rounded-md bg-sky-500/15 px-1.5 font-mono text-[10px] text-sky-700 dark:text-sky-200">{item.count}</span> : null}
+                      {badge[item.view] ? <span className="rounded-md bg-sky-500/15 px-1.5 font-mono text-[10px] text-sky-700 dark:text-sky-200">{badge[item.view]}</span> : null}
                     </button>
                   )
                 })}

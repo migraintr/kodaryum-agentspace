@@ -91,7 +91,6 @@ export const TASKS = [
   { no: 4, title: 'Lansman metinleri', owner: 'elif', helpers: [], progress: 72, status: 'active' },
   { no: 5, title: 'Lansman stratejisi', owner: 'mira', helpers: [], progress: 55, status: 'active' },
 ]
-export const OPEN_TASKS = TASKS.length
 
 const ago = (min) => new Date(Date.now() - min * 60_000).toISOString()
 

@@ -1,8 +1,10 @@
-// Menü ekranları (tembel yüklenir): Projeler, AI Çalışanlar; henüz hazır olmayanlar için bilgi ekranı
+// Menü ekranları (tembel yüklenir): Görevler, Departmanlar, Projeler, AI Çalışanlar; henüz hazır olmayanlar için bilgi ekranı
 import { Construction } from 'lucide-react'
 import { useStore } from '../store.js'
 import AgentsView from './AgentsView.jsx'
+import DepartmentsView from './DepartmentsView.jsx'
 import ProjectsView from './ProjectsView.jsx'
+import TasksView from './TasksView.jsx'
 import { ViewShell } from './shell.jsx'
 
 function Placeholder({ label }) {
@@ -13,7 +15,7 @@ function Placeholder({ label }) {
         <div className="max-w-sm">
           <p className="text-[14px] font-semibold text-ink-2">{label} modülü yakında</p>
           <p className="mt-1.5 text-[12.5px] text-ink-4">
-            Bu bölüm sonraki adımda bağlanacak. Şimdilik Projeler ve AI Çalışanlar ekranları ile 3D ofis kullanılabilir.
+            Bu bölüm sonraki adımda bağlanacak. Şimdilik Görevler, Departmanlar, Projeler ve AI Çalışanlar ekranları ile ofis kullanılabilir.
           </p>
           <button
             type="button"
@@ -31,5 +33,7 @@ function Placeholder({ label }) {
 export default function ViewHost({ view, label }) {
   if (view === 'projeler') return <ProjectsView />
   if (view === 'ajanlar') return <AgentsView />
+  if (view === 'gorevler') return <TasksView />
+  if (view === 'departmanlar') return <DepartmentsView />
   return <Placeholder label={label} />
 }

@@ -13,7 +13,6 @@ export const PRIORITY = {
   yuksek: { label: 'Yüksek', color: '#f59e0b', speed: 1.8 },
   kritik: { label: 'Kritik', color: '#ef4444', speed: 2.8 },
 }
-const PRIORITY_ORDER = ['normal', 'yuksek', 'kritik']
 
 const round1 = (v) => Math.round(v * 10) / 10
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
@@ -133,7 +132,6 @@ export const useStore = create((set, get) => ({
   typing: false,
   chatOpen: false,
   unread: 0,
-  composing: false, // alt paneldeki "yeni hedef" yazma alanı
 
   navOpen: false,
   theme: initialTheme(),
@@ -175,7 +173,6 @@ export const useStore = create((set, get) => ({
   openChat: () => set({ chatOpen: true, unread: 0 }),
   closeChat: () => set({ chatOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, unread: 0 })),
-  setComposing: (composing) => set({ composing }),
   toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
   closeNav: () => set({ navOpen: false }),
 
@@ -185,8 +182,7 @@ export const useStore = create((set, get) => ({
     later(() => get().toast?.id === id && set({ toast: null }), 3200)
   },
 
-  cyclePriority: () => {
-    const priority = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(get().priority) + 1) % PRIORITY_ORDER.length]
+  setPriority: (priority) => {
     set({ priority })
     get().notify(`Öncelik: ${PRIORITY[priority].label}`, priority === 'kritik' ? 'warn' : 'info')
   },
@@ -196,7 +192,7 @@ export const useStore = create((set, get) => ({
   send: (raw) => {
     const text = raw.trim()
     if (!text || get().typing) return false
-    set((s) => ({ messages: [...s.messages, message('HUMAN', text, { by: s.userId })], typing: true, composing: false }))
+    set((s) => ({ messages: [...s.messages, message('HUMAN', text, { by: s.userId })], typing: true }))
 
     later(() => {
       const s = get()
@@ -323,5 +319,4 @@ export const agentTask = (tasks, personId) =>
   tasks.find((t) => t.status === 'active' && t.owner === personId) ??
   tasks.find((t) => t.status === 'active' && t.helpers.includes(personId)) ??
   tasks.find((t) => t.status === 'pending' && t.owner === personId)
-export const onBreak = () => PEOPLE.filter((p) => p.onBreak)
 export { BOARD_BY_ID, CEO }

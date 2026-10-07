@@ -70,15 +70,13 @@ export const HEADS = {
 export const EXTRA_SEATS = [[79, 199], [1220, 204], [288, 597]]
 
 export const BUBBLE = { x: 890, y: 68, w: 164, h: 70 } // ADA konuşma balonu (gömülü balonu örter)
-export const HUB = [833.5, 320.5] // koridordaki turuncu dağıtım merkezi
-export const CORY = 349 // koridor ışık şeridi
-export const FLOW = { x0: 372, x1: 1229 }
+export const HUB = [833.5, 320.5] // görev paketlerinin kalkış noktası (koridor ortası)
+export const CORY = 349 // görev rotalarının koridor çizgisi
 export const RACKS = [[411, 186, 39, 92], [453, 186, 62, 92], [1284, 565, 36, 92], [1323, 565, 39, 92], [1366, 565, 41, 92]]
-export const KLOGO = [835, 84]
+export const KLOGO = [836, 84] // CEO ofisi arka duvarı: Kodaryum logosu merkezi
 export const DESIGN_SCREEN = { x: 1347, y: 81, w: 92, h: 43 }
 export const MAP = { x: 1440, y: 552, w: 98, h: 54, pins: [[24, 18], [47, 15], [53, 20], [72, 22], [30, 38], [83, 40]] }
 export const COFFEE = [[923, 458], [1031, 458], [1083, 458]]
-export const RESEARCH_LINK = 'M608 472 L608 561 L588 561' // Nova ↔ İpek iş birliği çizgisi
 export const ADA_TO_HUB = 'M835 150 L835 304'
 
 // Merkezden ajanın isimliğine giden görev rotası (koridor üzerinden)

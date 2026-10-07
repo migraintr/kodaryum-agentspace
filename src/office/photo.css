@@ -66,14 +66,8 @@
 @keyframes po-sweep { from { translate: 0 0; } to { translate: 2700px 0; } }
 .po-led { width: 2.6px; height: 2.2px; border-radius: 1px; background: var(--c); box-shadow: 0 0 4px var(--c); animation: po-blink var(--d) steps(1, end) var(--dl) infinite; }
 @keyframes po-blink { 0% { opacity: .95; } 37% { opacity: .12; } 55% { opacity: .95; } 81% { opacity: .2; } }
-.po-flow { top: 336px; width: 120px; height: 26px; border-radius: 50%; background: radial-gradient(ellipse, rgba(110, 220, 255, .95), rgba(60, 170, 255, .35) 45%, rgba(60, 170, 255, 0) 72%); animation: po-flow 3.7s linear var(--dl) infinite; }
-@keyframes po-flow { 0% { transform: translateX(0); opacity: 0; } 15%, 85% { opacity: .9; } 100% { transform: translateX(857px); opacity: 0; } }
-.po-flows.busy .po-flow { animation-duration: 1.6s; }
-.po-hub { width: 34px; height: 34px; border-radius: 8px; border: 2.5px solid #ffb04d; box-shadow: 0 0 12px #ff9a2a; animation: po-hubring 2.4s ease-out var(--dl) infinite; }
-@keyframes po-hubring { from { transform: scale(1); opacity: .8; } to { transform: scale(3.2); opacity: 0; } }
-.po-hubglow { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 170, 60, .85), rgba(255, 140, 30, 0) 70%); animation: po-pulse 1.6s ease-in-out infinite; }
-.po-kglow { width: 140px; height: 120px; border-radius: 50%; background: radial-gradient(ellipse, rgba(120, 220, 255, .9), rgba(80, 170, 255, 0) 68%); animation: po-pulse 3.4s ease-in-out infinite; opacity: .3; }
-.po-kglow.talk { animation-duration: .9s; }
+.po-fx > .po-klogo { mix-blend-mode: normal; }
+.po-klogo { position: absolute; pointer-events: none; filter: drop-shadow(0 3px 5px rgba(20, 10, 0, .45)) drop-shadow(0 0 10px rgba(130, 200, 255, .35)); }
 @keyframes po-pulse { 0%, 100% { opacity: .18; } 50% { opacity: .55; } }
 .po-scr { overflow: hidden; border-radius: 2px; }
 .po-scr i { position: absolute; top: -10px; left: -40px; width: 36px; height: 70px; background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .6), rgba(255, 255, 255, 0)); transform: rotate(18deg); animation: po-band 4s linear infinite; }
@@ -84,8 +78,6 @@
 @keyframes po-arc { 0% { stroke-dashoffset: 1; opacity: 1; } 55% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
 .po-steam { width: 12px; height: 16px; border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 70%); filter: blur(1.5px); animation: po-steam 2.6s ease-out var(--dl) infinite; }
 @keyframes po-steam { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 30% { opacity: .55; } 100% { transform: translate(4px, -32px) scale(1.8); opacity: 0; } }
-.po-pdot { left: 0; top: 0; width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle, #e3d6ff, #9a6cff 55%, rgba(154, 108, 255, 0) 72%);
-  offset-path: path("M608 472 L608 561 L588 561"); animation: po-along 2.6s linear var(--dl) infinite; }
 @keyframes po-along { 0% { offset-distance: 0%; opacity: 0; } 15%, 85% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
 
 /* çalışıyor balonu */
