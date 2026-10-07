@@ -15,40 +15,51 @@
 .po-zone.active { stroke: var(--c); stroke-width: 4; filter: drop-shadow(0 0 12px var(--c)); }
 .po-dim { fill: rgba(6, 12, 30, 0.42); pointer-events: none; transition: opacity .4s; }
 
-/* ---------- oda tabelaları ---------- */
-.po-pq { position: absolute; display: flex; align-items: center; gap: 9px; padding: 0 5px 0 13px; pointer-events: auto; cursor: pointer;
-  background: linear-gradient(180deg, #183f86 0%, #0d2659 100%); border: 1.5px solid rgba(150, 190, 255, .75); border-radius: 5px;
-  box-shadow: 0 4px 10px rgba(4, 12, 38, .5), inset 0 1px 0 rgba(255, 255, 255, .22); color: #fff;
-  font-weight: 700; font-size: 17.5px; letter-spacing: .6px; white-space: nowrap; transform: translate(-50%, -50%); transition: box-shadow .25s, transform .25s; }
-.po-pq.solo { justify-content: center; padding: 0 10px; }
-.po-pq:hover, .po-pq.on { box-shadow: 0 0 0 2px var(--g), 0 0 18px 4px var(--g), 0 4px 10px rgba(4, 12, 38, .5); }
-.po-pq .ch { margin-left: auto; height: calc(100% - 9px); min-width: 42px; padding: 0 8px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 600; letter-spacing: .3px; background: var(--c); border: 1.5px solid var(--b, rgba(255, 255, 255, .4)); }
+/* ---------- oda tabelaları (buzlu cam) ---------- */
+.po-pq { position: absolute; display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 6px 0 14px; pointer-events: auto; cursor: pointer;
+  background: linear-gradient(180deg, rgba(14, 26, 58, .66), rgba(8, 16, 38, .74)); backdrop-filter: blur(8px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, .26); border-left: 4px solid var(--g); border-radius: 9px;
+  box-shadow: 0 6px 16px rgba(4, 12, 38, .4), inset 0 1px 0 rgba(255, 255, 255, .18); color: #fff;
+  font-weight: 700; font-size: 14px; letter-spacing: 1.6px; white-space: nowrap; transform: translate(-50%, -50%); transition: box-shadow .25s, transform .25s; }
+.po-pq.solo { justify-content: center; padding: 0 14px; }
+.po-pq:hover, .po-pq.on { box-shadow: 0 0 0 1.5px var(--g), 0 0 16px 2px color-mix(in srgb, var(--g) 70%, transparent), 0 6px 16px rgba(4, 12, 38, .4); }
+.po-pq .ch { margin-left: 4px; height: 20px; min-width: 34px; padding: 0 8px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .3px; background: color-mix(in srgb, var(--g) 55%, rgba(255, 255, 255, .12)); border: 1px solid rgba(255, 255, 255, .35); }
 
-/* ---------- ajan isimlikleri ---------- */
-.po-tg { position: absolute; display: flex; align-items: stretch; border-radius: 4px; white-space: nowrap; pointer-events: auto; cursor: pointer;
-  font-size: 12.2px; box-shadow: 0 3px 8px rgba(4, 12, 38, .45); transform: translate(-50%, -50%); }
-.po-tg .in { display: flex; flex: 1; border-radius: 4px; overflow: hidden; border: 1.5px solid var(--bc, rgba(150, 190, 255, .7)); }
-.po-tg .n { width: 24px; flex: none; background: var(--c); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13.5px; transition: background .3s; }
-.po-tg .n.idle { opacity: .55; }
-.po-tg .bd { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px 0 8px; background: linear-gradient(180deg, #173c80, #0f2b62); color: #fff; }
-.po-tg.lt .bd { background: linear-gradient(180deg, #fff, #eef3fb); color: #13234d; }
-.po-tg .bd b { font-weight: 800; letter-spacing: .5px; font-size: 12.6px; }
-.po-tg .bd span { font-weight: 500; opacity: .95; }
-.po-tg .ri { width: 13px; height: 13px; flex: none; border-radius: 50%; border: 2.6px solid var(--c); display: flex; align-items: center; justify-content: center; }
-.po-tg .ri::after { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--c); }
-.po-tg .ok { position: absolute; right: -8px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: #1fbf75; border: 2px solid #fff;
-  display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
-.po-tg:hover { filter: brightness(1.08); box-shadow: 0 0 0 2px var(--c), 0 4px 12px rgba(4, 12, 38, .5); }
+/* ---------- ajan isimlikleri (kompakt cam hap) ---------- */
+.po-tg { position: absolute; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 11px 0 10px; border-radius: 999px; white-space: nowrap; pointer-events: auto; cursor: pointer;
+  background: rgba(10, 18, 42, .62); backdrop-filter: blur(6px) saturate(1.3); border: 1px solid rgba(255, 255, 255, .24); color: #fff;
+  box-shadow: 0 3px 10px rgba(4, 12, 38, .38); font-size: 11.5px; transform: translate(-50%, -50%); transition: background .25s, box-shadow .25s, padding .25s; }
+.po-tg b { font-weight: 800; letter-spacing: .6px; font-size: 11.5px; }
+.po-tg .rl { display: none; font-weight: 500; opacity: .85; }
+[data-lod="near"] .po-tg .rl, .po-tg:hover .rl { display: inline; }
+.po-tg .dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #94a3b8; box-shadow: 0 0 0 2px rgba(148, 163, 184, .25); }
+.po-tg.work .dot { background: #22c58b; box-shadow: 0 0 0 2px rgba(34, 197, 139, .3); animation: po-live 1.8s ease-in-out infinite; }
+.po-tg.wait .dot { background: #f5a524; box-shadow: 0 0 0 2px rgba(245, 165, 36, .3); }
+.po-tg.done .dot { background: #22c58b; }
+.po-tg .n { font-style: normal; min-width: 16px; height: 16px; padding: 0 4px; margin-right: -3px; border-radius: 999px; background: var(--c); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+.po-tg .n.ok { background: #1fbf75; padding: 0; width: 16px; }
+.po-tg:hover { background: rgba(10, 18, 42, .86); box-shadow: 0 0 0 1.5px var(--c), 0 4px 14px rgba(4, 12, 38, .5); z-index: 5; }
 .po-tg.hit { animation: po-hit .7s ease-out both; }
-.po-tg.hit::after { content: ""; position: absolute; inset: -2px; border-radius: 5px; border: 2px solid var(--c); animation: po-ring .9s ease-out both; animation-delay: inherit; }
+.po-tg.hit::after { content: ""; position: absolute; inset: -2px; border-radius: 999px; border: 2px solid var(--c); animation: po-ring .9s ease-out both; animation-delay: inherit; }
+@keyframes po-live { 0%, 100% { box-shadow: 0 0 0 2px rgba(34, 197, 139, .3); } 50% { box-shadow: 0 0 0 5px rgba(34, 197, 139, 0); } }
 @keyframes po-hit { 0% { transform: translate(-50%, -50%) scale(1); } 35% { transform: translate(-50%, -50%) scale(1.18); } 100% { transform: translate(-50%, -50%) scale(1); } }
 @keyframes po-ring { from { transform: scale(1); opacity: .95; } to { transform: scale(1.6); opacity: 0; } }
 
-.po-cp { position: absolute; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%);
-  background: linear-gradient(180deg, #183f86, #0d2659); border: 1.5px solid rgba(150, 190, 255, .75); border-radius: 4px;
-  color: #fff; font-weight: 700; font-size: 12.6px; letter-spacing: .7px; white-space: nowrap; box-shadow: 0 3px 8px rgba(4, 12, 38, .45); }
-.po-cp.live { box-shadow: 0 0 0 2px #ffb04d, 0 0 18px 4px #ffb04d; transition: box-shadow .3s; }
+/* ---------- koridor canlı şeridi ---------- */
+.po-tick { position: absolute; display: flex; align-items: center; gap: 14px; height: 34px; max-width: 880px; padding: 0 16px; border-radius: 999px; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer;
+  background: linear-gradient(180deg, rgba(14, 26, 58, .66), rgba(8, 16, 38, .74)); backdrop-filter: blur(8px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .26);
+  box-shadow: 0 6px 18px rgba(4, 12, 38, .4), inset 0 1px 0 rgba(255, 255, 255, .16); color: #fff; font-size: 12.5px; white-space: nowrap; transition: box-shadow .3s; }
+.po-tick.live { box-shadow: 0 0 0 1.5px #ffb04d, 0 0 18px 3px rgba(255, 176, 77, .65); }
+.po-tick .k { opacity: .9; } .po-tick .k b { font-family: ui-monospace, monospace; font-size: 13.5px; margin-right: 3px; }
+.po-tick .k.warn { color: #ffd08a; }
+.po-tick .msg { display: flex; align-items: center; gap: 7px; min-width: 0; max-width: 480px; overflow: hidden; text-overflow: ellipsis; padding-left: 14px; border-left: 1px solid rgba(255, 255, 255, .25); opacity: .95; }
+.po-tick .msg b { color: #9fd0ff; }
+.po-tick .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #22c58b; animation: po-live 1.8s ease-in-out infinite; }
+
+/* hafif vinyet: kenarlarda derinlik hissi, tıklamayı engellemez */
+.po-vig { position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 58%, rgba(4, 10, 28, .34) 100%); }
 
 /* ---------- ADA konuşma balonu ---------- */
 .po-bub { position: absolute; background: #fff; border-radius: 10px; box-shadow: 0 5px 14px rgba(4, 12, 38, .45); padding: 7px 11px 0 12px; pointer-events: auto; cursor: pointer; }

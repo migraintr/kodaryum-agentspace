@@ -5,7 +5,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { CEO, DEPARTMENTS, DEPT_BY_ID, PERSON_BY_ID, teamOf } from '../data.js'
 import { agentTask, useStore } from '../store.js'
 import {
-  ADA_TO_HUB, BUBBLE, COFFEE, CORRIDOR_SIGNS, DESIGN_SCREEN, HEADS, KLOGO, MAP, PLAQUES, PLATE, RACKS, ROOMS, TAGS, box, routeTo,
+  ADA_TO_HUB, BUBBLE, COFFEE, DESIGN_SCREEN, HEADS, HUB, KLOGO, MAP, PLAQUES, PLATE, RACKS, ROOMS, TAGS, box, routeTo,
 } from './photoLayout.js'
 import LivingPlate from './LivingPlate.jsx'
 import './photo.css'
@@ -55,6 +55,7 @@ function useCamera(wrapRef, camRef, scaleRef) {
     const Sy = s.fy * s.cur.z
     const el = camRef.current
     if (scaleRef) scaleRef.current = Sx
+    wrapRef.current?.setAttribute('data-lod', s.cur.z > 1.2 ? 'near' : 'far')
     if (!el) return
     el.style.transition = ease === 'none' ? 'none' : `transform ${ease}`
     el.style.transform = `translate3d(${(s.W / 2 - s.cur.x * Sx).toFixed(2)}px,${(s.H / 2 - s.cur.y * Sy).toFixed(2)}px,0) scale(${Sx.toFixed(5)},${Sy.toFixed(5)})`
@@ -176,11 +177,11 @@ function Tag({ id, task, hit, onEnter, onLeave, onFocus }) {
   const person = PERSON_BY_ID.get(id)
   const k = box(t.b)
   const done = task?.status === 'done'
-  const color = t.ring ?? t.color
+  const state = done ? 'done' : task?.status === 'active' ? 'work' : task ? 'wait' : 'idle'
   return (
     <div
-      className={`po-tg ${t.lt ? 'lt' : ''} ${hit ? 'hit' : ''}`}
-      style={{ left: k.x + k.w / 2, top: k.y + k.h / 2, minWidth: k.w, height: k.h, '--c': color, '--bc': t.ring ? 'rgba(150,190,255,.7)' : color, animationDelay: hit ? `${hit}s` : undefined }}
+      className={`po-tg ${state} ${hit ? 'hit' : ''}`}
+      style={{ left: k.x + k.w / 2, top: k.y + k.h / 2, minWidth: k.w, height: k.h, '--c': DEPT_BY_ID.get(person.dept).color, animationDelay: hit ? `${hit}s` : undefined }}
       onPointerEnter={(e) => onEnter(id, e)}
       onPointerMove={(e) => onEnter(id, e)}
       onPointerLeave={onLeave}
@@ -190,26 +191,46 @@ function Tag({ id, task, hit, onEnter, onLeave, onFocus }) {
         onFocus(person.dept)
       }}
     >
-      <div className="in">
-        {!t.ring && <span className={`n ${task ? '' : 'idle'}`}>{task ? task.no : 0}</span>}
-        <div className="bd">
-          {t.ring && !task && <i className="ri" />}
-          {t.ring && task && (
-            <span className="n" style={{ width: 'auto', padding: '0 5px', borderRadius: 3, marginLeft: -4 }}>
-              {task.no}
-            </span>
-          )}
-          <b>{person.name.toLocaleUpperCase('tr-TR')}</b>
-          <span>{person.label}</span>
-        </div>
-      </div>
+      <i className="dot" />
+      <b>{person.name.toLocaleUpperCase('tr-TR')}</b>
+      <span className="rl">{person.label}</span>
+      {task && !done && <em className="n">{task.no}</em>}
       {done && (
-        <i className="ok">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
+        <em className="n ok">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12.5l4.5 4.5L19 7.5" />
           </svg>
-        </i>
+        </em>
       )}
+    </div>
+  )
+}
+
+// Koridordaki canlı şerit: özet göstergeler + en son rapor (tıklayınca sohbet açılır)
+function Ticker({ onOpen }) {
+  const tasks = useStore((s) => s.tasks)
+  const messages = useStore((s) => s.messages)
+  const flying = useStore((s) => s.flights.length > 0)
+  const active = tasks.filter((t) => t.status === 'active')
+  const avg = active.length ? Math.round(active.reduce((n, t) => n + t.progress, 0) / active.length) : 100
+  const pending = tasks.filter((t) => t.status === 'pending').length
+  const last = messages.findLast((m) => m.from === 'RELAY' || m.from === 'CEO')
+  const who = last?.from === 'CEO' ? 'ADA' : last?.agent
+  return (
+    <div className={`po-tick ${flying ? 'live' : ''}`} style={{ left: HUB[0], top: 337 }} onClick={onOpen} onPointerDown={(e) => e.stopPropagation()} title="ADA ile sohbeti aç">
+      <span className="k"><b>{active.length}</b> aktif görev</span>
+      <span className="k"><b>%{avg}</b> ilerleme</span>
+      {pending > 0 && <span className="k warn"><b>{pending}</b> onay bekliyor</span>}
+      <span className="msg">
+        <i className="dot" />
+        {last ? (
+          <>
+            <b>{who}</b> {last.text.split('\n')[0]}
+          </>
+        ) : (
+          'ADA görevleri dağıtmaya hazır'
+        )}
+      </span>
     </div>
   )
 }
@@ -473,14 +494,7 @@ export default function PhotoOffice() {
           {Object.entries(HEADS).map(([id, [x, y]]) => (
             <i key={id} className="po-hot" style={{ left: x, top: y + 8 }} onPointerEnter={(e) => showCard(id, e)} onPointerMove={(e) => showCard(id, e)} onPointerLeave={hideCard} />
           ))}
-          {CORRIDOR_SIGNS.map((c, i) => {
-            const k = box(c.b)
-            return (
-              <div key={c.text} className={`po-cp ${i === 0 && flights.length ? 'live' : ''}`} style={{ left: k.x + k.w / 2, top: k.y + k.h / 2, minWidth: k.w, height: k.h }}>
-                {c.text}
-              </div>
-            )
-          })}
+          <Ticker onOpen={openChat} />
           {Object.keys(PLAQUES).map((id) => (
             <Plaque key={id} id={id} active={roomId === id || hoveredRoom === id} onFocus={focusRoom} />
           ))}
@@ -491,6 +505,7 @@ export default function PhotoOffice() {
         </div>
       </div>
 
+      <div className="po-vig" />
       {card && <AgentCard {...card} tasks={tasks} />}
       {!loaded && (
         <div className="absolute inset-0 grid place-items-center text-[12px] font-semibold tracking-[0.3em] text-sky-200/80">OFİS YÜKLENİYOR…</div>
