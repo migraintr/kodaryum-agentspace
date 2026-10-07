@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/*
+ * KKM tasarım belirteçleri (design tokens)
+ * Tailwind v4: @theme içindeki değişkenler otomatik olarak yardımcı sınıf üretir
+ * (örn: --color-kkm-void → bg-kkm-void, text-kkm-void)
+ * Yazı tipleri npm ile paketlenir (@fontsource) → çevrimdışı çalışır.
+ */
+@theme {
+  --font-sans: "Inter Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "Cascadia Code", ui-monospace, monospace;
+
+  --color-kkm-void: #05070d;
+  --color-kkm-deep: #0a0f1c;
+  --color-kkm-cyan: #22d3ee;
+  --color-kkm-violet: #a78bfa;
+  --color-kkm-amber: #fbbf24;
+  --color-kkm-rose: #f43f5e;
+  --color-kkm-emerald: #34d399;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-kkm-void);
+  color: #e2e8f0;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* İnce, cam panellerle uyumlu kaydırma çubuğu */
+.kkm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+}
+.kkm-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.kkm-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+}
+
+/* Hareket hassasiyeti: kullanıcı azaltılmış hareket istiyorsa animasyonları kıs */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

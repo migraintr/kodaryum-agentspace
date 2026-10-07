@@ -1,0 +1,156 @@
+@import "tailwindcss";
+@source not "../_arsiv"; /* arşivlenmiş eski sürümler sınıf üretimine katılmasın */
+
+/* Tema: <html data-theme="light|dark">. Varsayılan açık tema; "dark:" varyantı koyu temada geçerli. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Roboto Mono Variable", ui-monospace, monospace;
+}
+
+/* Temaya göre değişen anlamsal renkler (ink = yazı tonları, fg = kenar/hover için kontrast rengi) */
+@theme inline {
+  --color-void: var(--void);
+  --color-deep: var(--deep);
+  --color-panel: var(--panel);
+  --color-fg: var(--fg);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+}
+
+:root {
+  --void: #e6edf7;
+  --deep: #f8fafc;
+  --panel: #ffffff;
+  --fg: #0f172a;
+  --ink: #0f172a;
+  --ink-2: #1e293b;
+  --ink-3: #334155;
+  --ink-4: #475569;
+  --grid-line: rgb(15 23 42 / 0.045);
+  --glow-a: rgb(14 165 233 / 0.08);
+  --glow-b: rgb(139 92 246 / 0.07);
+  --scrollbar: rgb(15 23 42 / 0.2);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --void: #05080f;
+  --deep: #0a0e1a;
+  --panel: #0c1322;
+  --fg: #ffffff;
+  --ink: #ffffff;
+  --ink-2: #e2e8f0;
+  --ink-3: #cbd5e1;
+  --ink-4: #94a3b8;
+  --grid-line: rgb(148 163 184 / 0.035);
+  --glow-a: rgb(56 189 248 / 0.07);
+  --glow-b: rgb(139 92 246 / 0.08);
+  --scrollbar: rgb(148 163 184 / 0.18);
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Uygulama zemini: ince kılavuz ızgarası ve köşelerde yumuşak ışık */
+.app-bg {
+  background:
+    radial-gradient(60rem 30rem at 0% 0%, var(--glow-a), transparent 60%),
+    radial-gradient(50rem 30rem at 100% 100%, var(--glow-b), transparent 60%),
+    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--void);
+}
+
+/* Mikro HUD köşe çizgileri: cam panellerin sol üst ve sağ alt köşesinde ince neon işaret */
+.hud::before,
+.hud::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  border-color: rgb(14 165 233 / 0.5);
+}
+.hud::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+  border-top-left-radius: 14px;
+}
+.hud::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+  border-bottom-right-radius: 14px;
+}
+
+/* 3D sahne etiketleri: uzaklaştıkça önce rol, sonra soyadı gizlenir (data-lod Projector'dan gelir) */
+[data-lod="tiny"] .lod-role,
+[data-lod="tiny"] .lod-last,
+[data-lod="tiny"] .lod-person,
+[data-lod="tiny"] .lod-sign-name,
+[data-lod="tiny"] .lod-sign-meta,
+[data-lod="far"] .lod-role,
+[data-lod="far"] .lod-last,
+[data-lod="far"] .lod-sign-meta,
+[data-lod="mid"] .lod-role {
+  display: none;
+}
+
+/* Onay bekleyen plan: "Onayla ve başlat" butonu parlar */
+@keyframes kkm-attn {
+  0%, 100% { box-shadow: 0 3px 8px rgb(20 90 220 / .35), 0 0 0 0 rgb(56 152 255 / .55); }
+  50% { box-shadow: 0 3px 8px rgb(20 90 220 / .35), 0 0 0 7px rgb(56 152 255 / 0); }
+}
+
+/* Komuta Hattı: dönen renk geçişli çerçeve (odaklanınca hızlanır ve parlar) */
+@property --kkm-a {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.kkm-console {
+  background: conic-gradient(from var(--kkm-a), #8a4cf0, #2f80ed, #22c1ee, #34d399, #8a4cf0);
+  animation: kkm-spin 7s linear infinite;
+}
+.kkm-console:focus-within {
+  animation-duration: 2.4s;
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.12), 0 14px 34px -12px rgb(59 130 246 / 0.6);
+}
+@keyframes kkm-spin {
+  to { --kkm-a: 360deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kkm-console { animation: none; }
+}
+
+/* Marka kartındaki dalgalar */
+@keyframes kkm-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}

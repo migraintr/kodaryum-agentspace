@@ -1,0 +1,25 @@
+@import "tailwindcss";
+@source not "../_arsiv"; /* arşivlenmiş eski sürüm sınıf üretimine katılmasın */
+
+@theme {
+  --font-sans: "Inter Variable", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Roboto Mono Variable", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #e9eef5;
+  color: #334155;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(15 23 42 / 0.18) transparent;
+}
