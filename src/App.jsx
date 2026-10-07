@@ -3,7 +3,7 @@
 // (ekranlar: görevler, departmanlar, projeler…) · sağ altta ADA ile sohbet balonu
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CircleCheck, Info, Maximize2, TriangleAlert } from 'lucide-react'
+import { CircleCheck, Info, Maximize2, Tags, TriangleAlert } from 'lucide-react'
 import PhotoOffice from './office/PhotoOffice.jsx'
 import { useStore } from './store.js'
 import { ChatWidget } from './ui/ChatWidget.jsx'
@@ -28,22 +28,24 @@ function SceneLoading() {
   )
 }
 
-// Odaya odaklanınca ofisin sağ üstünde "Genel görünüm" butonu
+// Ofisin sağ üstü: etiket görünürlüğü (sade / tümü) ve odaya odaklanınca "Genel görünüm"
 function OfficeControls() {
   const roomId = useStore((s) => s.roomId)
   const focusRoom = useStore((s) => s.focusRoom)
+  const labels = useStore((s) => s.labels)
+  const toggleLabels = useStore((s) => s.toggleLabels)
+  const mode = useStore((s) => s.officeMode)
+  const btn = 'pointer-events-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-white/20 bg-[#0d2659]/70 px-3.5 text-[12.5px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#0d2659]/95'
   return (
-    <div className="pointer-events-none absolute top-3 right-3 z-20">
+    <div className="pointer-events-none absolute top-3 right-3 z-20 flex gap-2">
+      {mode === 'photo' && (
+        <button type="button" onClick={toggleLabels} className={btn} title="Kişi etiketleri: sade görünümde yalnızca odaya odaklanınca görünür">
+          <Tags size={14} /> {labels === 'all' ? 'Etiketler: tümü' : 'Etiketler: sade'}
+        </button>
+      )}
       <AnimatePresence>
         {roomId && (
-          <motion.button
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            type="button"
-            onClick={() => focusRoom(null)}
-            className="pointer-events-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-white/20 bg-[#0d2659]/80 px-3.5 text-[12.5px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#0d2659]/95"
-          >
+          <motion.button initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} type="button" onClick={() => focusRoom(null)} className={btn}>
             <Maximize2 size={14} /> Genel görünüm
           </motion.button>
         )}

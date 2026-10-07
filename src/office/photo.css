@@ -60,8 +60,6 @@
 .po-tick .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #22c58b; animation: po-live 1.8s ease-in-out infinite; }
 
 /* hafif vinyet: kenarlarda derinlik hissi, tıklamayı engellemez */
-.po-vig { position: absolute; inset: 0; pointer-events: none; z-index: 1;
-  background: radial-gradient(ellipse at 50% 45%, rgba(0, 0, 0, 0) 58%, rgba(4, 10, 28, .34) 100%); }
 
 /* ---------- ADA konuşma balonu ---------- */
 .po-bub { position: absolute; background: #fff; border-radius: 10px; box-shadow: 0 5px 14px rgba(4, 12, 38, .45); padding: 7px 11px 0 12px; pointer-events: auto; cursor: pointer; }
@@ -131,3 +129,36 @@
 @keyframes po-shaft { from { translate: -18px 0; opacity: .5; } 50% { opacity: .9; } to { translate: 26px 0; opacity: .55; } }
 [data-lighting="dusk"] .po-shafts i { background: linear-gradient(180deg, rgba(255, 168, 90, .55), rgba(255, 140, 70, .14) 60%, rgba(255, 140, 70, 0)); }
 [data-lighting="night"] .po-shafts, [data-lighting="night"] .po-sweep { opacity: 0; }
+
+/* ---------- sade görünüm: kişi etiketleri yalnızca yakınlaşınca, odaya odaklanınca ya da oda üzerindeyken ---------- */
+.po-tg { transition: opacity .35s, background .25s, box-shadow .25s; }
+.po-wrap[data-labels="auto"][data-lod="far"] .po-tg { opacity: 0; pointer-events: none; }
+.po-wrap[data-room="yazilim"] .po-tg[data-dept="yazilim"],
+.po-wrap[data-room="tasarim"] .po-tg[data-dept="tasarim"],
+.po-wrap[data-room="pazarlama"] .po-tg[data-dept="pazarlama"],
+.po-wrap[data-room="arastirma"] .po-tg[data-dept="arastirma"],
+.po-wrap[data-room="operasyon"] .po-tg[data-dept="operasyon"],
+.po-wrap[data-room="yonetim"] .po-tg[data-dept="yonetim"] { opacity: 1 !important; pointer-events: auto !important; }
+/* sade görünümde tabelalar ve şerit daha hafif */
+.po-wrap[data-labels="auto"] .po-pq { font-size: 12.5px; height: 26px !important; background: linear-gradient(180deg, rgba(14, 26, 58, .5), rgba(8, 16, 38, .58)); }
+.po-wrap[data-labels="auto"] .po-tick { opacity: .88; transform: translate(-50%, -50%) scale(.9); }
+
+/* ---------- kamera katmanı (CameraFeed.jsx) ---------- */
+.po-feed { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.po-feed-grain { position: absolute; inset: -64px; opacity: .085; mix-blend-mode: overlay; background-size: 128px 128px; animation: po-grain .5s steps(5) infinite; }
+[data-lighting="night"] .po-feed-grain { opacity: .16; }
+[data-lighting="dusk"] .po-feed-grain { opacity: .11; }
+@keyframes po-grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-37px, 21px); } 40% { transform: translate(19px, -43px); } 60% { transform: translate(-11px, 52px); } 80% { transform: translate(44px, 9px); } 100% { transform: translate(0, 0); } }
+.po-feed-lens { position: absolute; inset: 0; background:
+  radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 55%, rgba(3, 8, 20, .38) 100%),
+  linear-gradient(180deg, rgba(255, 246, 228, .04), rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 75%, rgba(3, 8, 20, .12)); }
+.po-feed-hud, .po-feed-foot { position: absolute; left: 14px; display: flex; gap: 10px; align-items: center; font: 600 11px/1 ui-monospace, 'Roboto Mono Variable', monospace;
+  letter-spacing: .12em; color: rgba(255, 255, 255, .86); text-shadow: 0 1px 2px rgba(0, 0, 0, .7); }
+.po-feed-hud { top: 12px; }
+.po-feed-foot { bottom: 12px; }
+.po-feed-live { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 4px; background: rgba(0, 0, 0, .35); color: #fff; }
+.po-feed-live i { width: 7px; height: 7px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 6px #ff3b3b; animation: po-rec 1.6s steps(2) infinite; }
+@keyframes po-rec { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .po-feed-grain { animation: none; } }
+/* sade görünümde "yazıyor" balonları da yalnızca yakınlaşınca */
+.po-wrap[data-labels="auto"][data-lod="far"] .po-ty { display: none; }

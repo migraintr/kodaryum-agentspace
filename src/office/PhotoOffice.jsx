@@ -9,6 +9,7 @@ import {
 } from './photoLayout.js'
 import LivingPlate from './LivingPlate.jsx'
 import Walkers, { WALKERS } from './Walkers.jsx'
+import CameraFeed from './CameraFeed.jsx'
 import './photo.css'
 
 const { w: PW, h: PH } = PLATE
@@ -187,6 +188,7 @@ function Tag({ id, task, hit, onEnter, onLeave, onFocus }) {
   return (
     <div
       className={`po-tg ${state} ${hit ? 'hit' : ''}`}
+      data-dept={person.dept}
       style={{ left: k.x + k.w / 2, top: k.y + k.h / 2, minWidth: k.w, height: k.h, '--c': DEPT_BY_ID.get(person.dept).color, animationDelay: hit ? `${hit}s` : undefined }}
       onPointerEnter={(e) => onEnter(id, e)}
       onPointerMove={(e) => onEnter(id, e)}
@@ -368,6 +370,7 @@ export default function PhotoOffice() {
   const flights = useStore((st) => st.flights)
   const typing = useStore((st) => st.typing)
   const lighting = useStore((st) => st.lighting)
+  const labels = useStore((st) => st.labels)
   const lightRef = useRef(lighting)
   lightRef.current = lighting
   const focusRoom = useStore((st) => st.focusRoom)
@@ -468,6 +471,8 @@ export default function PhotoOffice() {
       ref={wrapRef}
       className="po-wrap"
       data-lighting={lighting}
+      data-labels={labels}
+      data-room={roomId ?? hoveredRoom ?? ''}
       onPointerDown={onPointerDown}
       onPointerMove={(e) => {
         onPointerMove(e)
@@ -516,7 +521,7 @@ export default function PhotoOffice() {
         </div>
       </div>
 
-      <div className="po-vig" />
+      <CameraFeed />
       {card && <AgentCard {...card} tasks={tasks} />}
       {!loaded && (
         <div className="absolute inset-0 grid place-items-center text-[12px] font-semibold tracking-[0.3em] text-sky-200/80">OFİS YÜKLENİYOR…</div>

@@ -123,6 +123,17 @@ void main() {
   // bloom: bulanık, parlak ve renkli alanlar çevreye taşar
   vec3 bl = textureLod(uTex, uv, 3.0).rgb * 0.55 + textureLod(uTex, uv, 5.0).rgb * 0.45;
   lit += bl * emissive(bl) * uBloom * uTint;
+
+  // fotoğrafik derecelendirme: yapay zekâ görselinin "HDR" parlaklığını gerçek kamera tepkisine yaklaştırır
+  vec3 x = lit * 0.92;
+  vec3 aces = clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); // filmik eğri
+  lit = mix(lit, aces, 0.55);
+  float L = luma(lit);
+  lit = mix(vec3(L), lit, 0.86);                                  // aşırı doygunluğu kır
+  vec3 shadowTone = vec3(0.97, 1.0, 1.04);                        // gölgeler hafif soğuk
+  vec3 highTone = vec3(1.03, 1.0, 0.95);                          // ışıklar hafif sıcak
+  lit *= mix(shadowTone, highTone, smoothstep(0.15, 0.8, L));
+  lit = lit * 0.975 + 0.012;                                      // siyahlar tam sıfır değil (lens/sensör)
   o = vec4(lit, 1.0);
 }`
 
