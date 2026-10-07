@@ -12,7 +12,7 @@ import { Sidebar } from './ui/Sidebar.jsx'
 import { TopBar } from './ui/TopBar.jsx'
 
 // three.js + 3B sahne ayrı parça: yalnızca 3B görünüm seçilince yüklenir
-const Scene3D = lazy(() => import('./scene/Scene3D.jsx'))
+const Scene3D = lazy(() => import('./hq/HQ.jsx'))
 // Menü ekranları (Projeler, AI Çalışanlar…) ilk açıldıklarında yüklenir
 const ViewHost = lazy(() => import('./views/index.jsx'))
 
