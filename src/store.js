@@ -88,6 +88,7 @@ const save = (key, value) => {
 }
 
 const THEME_COLORS = { light: '#eef3fa', dark: '#05080f' }
+const LIGHT_ORDER = ['day', 'dusk', 'night']
 const initialTheme = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme
@@ -100,6 +101,12 @@ function loadLeads() {
   } catch {
     return {}
   }
+}
+// Ofis ışığı: gündüz / akşam / gece. Arayüz teması yalnızca gecede koyudur.
+const initialLighting = () => {
+  const saved = load('kkm:light', null)
+  if (LIGHT_ORDER.includes(saved)) return saved === 'night' ? 'night' : saved
+  return initialTheme() === 'dark' ? 'night' : 'day'
 }
 const initialUser = () => {
   const saved = load('kkm:user', null)
@@ -135,6 +142,7 @@ export const useStore = create((set, get) => ({
 
   navOpen: false,
   theme: initialTheme(),
+  lighting: initialLighting(),
   userId: initialUser(),
   view: 'genel', // sol menüde seçili ekran ('genel' = ofis)
   officeMode: load('kkm:office', 'photo') === '3d' ? '3d' : 'photo', // photo: gerçekçi ofis · 3d: canlı 3B maket
@@ -157,10 +165,13 @@ export const useStore = create((set, get) => ({
     save('kkm:user', userId)
     set({ userId })
   },
-  toggleTheme: () => {
-    const theme = get().theme === 'dark' ? 'light' : 'dark'
+  // Işığı döndür: gündüz → akşam → gece → gündüz (koyu arayüz yalnızca gecede)
+  cycleLighting: () => {
+    const lighting = LIGHT_ORDER[(LIGHT_ORDER.indexOf(get().lighting) + 1) % LIGHT_ORDER.length]
+    const theme = lighting === 'night' ? 'dark' : 'light'
+    save('kkm:light', lighting)
     applyTheme(theme)
-    set({ theme })
+    set({ lighting, theme })
   },
 
   select: (id) => set({ selectedId: id, roomId: null }),

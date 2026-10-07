@@ -1,5 +1,5 @@
 // Üst bar (referans tasarım): menü · logo · KODARYUM | AgentSpace · slogan · canlı sayaçlar · saat · tema · profil
-import { Box, Image as ImageIcon, Menu, Moon, Sun, UserRound } from 'lucide-react'
+import { Box, Image as ImageIcon, Menu, Moon, Sun, Sunset, UserRound } from 'lucide-react'
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { Avatar, Logo, useNow } from './kit.jsx'
@@ -87,8 +87,10 @@ function ModeSwitch() {
 
 export function TopBar() {
   const toggleNav = useStore((s) => s.toggleNav)
-  const dark = useStore((s) => s.theme === 'dark')
-  const toggleTheme = useStore((s) => s.toggleTheme)
+  const lighting = useStore((s) => s.lighting)
+  const cycleLighting = useStore((s) => s.cycleLighting)
+  const LIGHT = { day: [Sun, 'Gündüz', 'text-amber-500'], dusk: [Sunset, 'Akşam', 'text-orange-500'], night: [Moon, 'Gece', 'text-indigo-400'] }
+  const [LightIcon, lightLabel, lightColor] = LIGHT[lighting]
 
   return (
     <header className="relative z-30 flex h-[58px] shrink-0 items-center gap-3 border-b border-slate-300/70 bg-gradient-to-b from-white to-[#f3f6fb] px-3 shadow-[0_3px_12px_rgba(8,24,60,.12)] sm:px-4 dark:border-slate-800 dark:from-[#0c1322] dark:to-[#0a0f1c]">
@@ -141,12 +143,12 @@ export function TopBar() {
         </span>
         <button
           type="button"
-          onClick={toggleTheme}
-          title={dark ? 'Gündüz görünümü' : 'Gece görünümü'}
-          aria-label={dark ? 'Açık temaya geç' : 'Koyu temaya geç'}
+          onClick={cycleLighting}
+          title={`Ofis ışığı: ${lightLabel} (değiştirmek için tıkla)`}
+          aria-label={`Ofis ışığı: ${lightLabel}. Değiştir`}
           className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-slate-300/80 bg-white text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:hover:text-white"
         >
-          {dark ? <Sun size={16} className="text-amber-300" /> : <Moon size={16} className="text-indigo-500" />}
+          <LightIcon size={16} className={lightColor} />
         </button>
         <AccountButton />
       </div>

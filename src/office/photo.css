@@ -4,7 +4,9 @@
 .po-wrap.dragging { cursor: grabbing; }
 .po-cam { position: absolute; left: 0; top: 0; width: 1672px; height: 690px; transform-origin: 0 0; will-change: transform; }
 .po-plate { position: absolute; inset: 0; width: 1672px; height: 690px; display: block; user-select: none; -webkit-user-drag: none; transition: filter .6s ease; }
-[data-theme="dark"] .po-plate { filter: brightness(.58) saturate(1.08) contrast(1.05); }
+/* WebGL yoksa (düz görsel) gece görünümü için yedek */
+[data-lighting="night"] img.po-plate { filter: brightness(.5) saturate(1.1) contrast(1.05); }
+[data-lighting="dusk"] img.po-plate { filter: brightness(.85) sepia(.25) saturate(1.1); }
 .po-layer { position: absolute; left: 0; top: 0; width: 1672px; height: 690px; pointer-events: none; overflow: visible; }
 .po-fx { overflow: hidden; }
 .po-fx > * { position: absolute; mix-blend-mode: screen; }
@@ -114,3 +116,18 @@
   .po-wrap *, .po-wrap *::after { animation: none !important; }
   .po-ty { opacity: 0; }
 }
+
+/* ---------- canlı figürler (Walkers.jsx) ---------- */
+.po-wk { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; will-change: transform; }
+.po-wk-body { position: absolute; transform-origin: 50% 100%; isolation: isolate; pointer-events: auto; cursor: pointer; will-change: transform; }
+.po-wk-body img { display: block; width: 100%; height: 100%; user-select: none; }
+.po-wk-tint { position: absolute; inset: 0; mix-blend-mode: multiply; mask-size: 100% 100%; -webkit-mask-size: 100% 100%; transition: background-color .6s ease; pointer-events: none; }
+.po-wk-shadow { position: absolute; left: 0; top: -3px; height: 9px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(ellipse, rgba(20, 12, 4, .42), rgba(20, 12, 4, 0) 70%); pointer-events: none; }
+
+/* ---------- pencere ışık huzmeleri (yalnızca gündüz/akşam) ---------- */
+.po-shafts { left: 0; top: 0; width: 567px; height: 283px; overflow: hidden; transition: opacity .8s; }
+.po-shafts i { position: absolute; top: -30px; width: 54px; height: 320px; transform: skewX(-24deg); filter: blur(9px);
+  background: linear-gradient(180deg, rgba(255, 244, 214, .5), rgba(255, 244, 214, .12) 60%, rgba(255, 244, 214, 0)); animation: po-shaft 46s ease-in-out var(--dl) infinite alternate; }
+@keyframes po-shaft { from { translate: -18px 0; opacity: .5; } 50% { opacity: .9; } to { translate: 26px 0; opacity: .55; } }
+[data-lighting="dusk"] .po-shafts i { background: linear-gradient(180deg, rgba(255, 168, 90, .55), rgba(255, 140, 70, .14) 60%, rgba(255, 140, 70, 0)); }
+[data-lighting="night"] .po-shafts, [data-lighting="night"] .po-sweep { opacity: 0; }

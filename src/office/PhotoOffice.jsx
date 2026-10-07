@@ -8,6 +8,7 @@ import {
   ADA_TO_HUB, BUBBLE, COFFEE, DESIGN_SCREEN, HEADS, HUB, KLOGO, MAP, PLAQUES, PLATE, RACKS, ROOMS, TAGS, box, routeTo,
 } from './photoLayout.js'
 import LivingPlate from './LivingPlate.jsx'
+import Walkers, { WALKERS } from './Walkers.jsx'
 import './photo.css'
 
 const { w: PW, h: PH } = PLATE
@@ -116,6 +117,11 @@ const Effects = memo(function Effects() {
   return (
     <div className="po-layer po-fx">
       <i className="po-sweep" />
+      <div className="po-shafts">
+        {[170, 300, 430].map((x, k) => (
+          <i key={x} style={{ left: x, '--dl': `${-k * 11}s` }} />
+        ))}
+      </div>
       {leds.map((l, i) => (
         <i key={i} className="po-led" style={{ left: l.left, top: l.top, '--c': l.c, '--d': l.d, '--dl': l.dl }} />
       ))}
@@ -361,6 +367,9 @@ export default function PhotoOffice() {
   const tasks = useStore((st) => st.tasks)
   const flights = useStore((st) => st.flights)
   const typing = useStore((st) => st.typing)
+  const lighting = useStore((st) => st.lighting)
+  const lightRef = useRef(lighting)
+  lightRef.current = lighting
   const focusRoom = useStore((st) => st.focusRoom)
   const hoverRoom = useStore((st) => st.hoverRoom)
   const openChat = useStore((st) => st.openChat)
@@ -458,6 +467,7 @@ export default function PhotoOffice() {
     <div
       ref={wrapRef}
       className="po-wrap"
+      data-lighting={lighting}
       onPointerDown={onPointerDown}
       onPointerMove={(e) => {
         onPointerMove(e)
@@ -468,8 +478,9 @@ export default function PhotoOffice() {
       onDoubleClick={() => focusRoom(null)}
     >
       <div ref={camRef} className="po-cam" style={{ opacity: loaded ? 1 : 0, transition: 'opacity .6s' }}>
-        <LivingPlate scaleRef={scaleRef} busyRef={busyRef} nodRef={nodRef} talkRef={talkRef} onLoad={() => setLoaded(true)} />
+        <LivingPlate scaleRef={scaleRef} busyRef={busyRef} nodRef={nodRef} talkRef={talkRef} lightRef={lightRef} onLoad={() => setLoaded(true)} />
         <Effects />
+        <Walkers lighting={lighting} onEnter={showCard} onLeave={hideCard} />
 
         {/* oda vurgusu: seçili/üzerinde olunan oda çerçevelenir, seçimde diğerleri kararır */}
         <svg className="po-layer" viewBox={`0 0 ${PW} ${PH}`}>
@@ -491,7 +502,7 @@ export default function PhotoOffice() {
         <Flights flights={flights} />
 
         <div className="po-layer">
-          {Object.entries(HEADS).map(([id, [x, y]]) => (
+          {Object.entries(HEADS).filter(([id]) => !WALKERS[id]).map(([id, [x, y]]) => (
             <i key={id} className="po-hot" style={{ left: x, top: y + 8 }} onPointerEnter={(e) => showCard(id, e)} onPointerMove={(e) => showCard(id, e)} onPointerLeave={hideCard} />
           ))}
           <Ticker onOpen={openChat} />

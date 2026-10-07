@@ -2,6 +2,8 @@
 // monitörlere her karede yumuşak, yerel bükme (liquify) uygulanır. Böylece fotoğraftaki kişiler klavyede yazar,
 // başını çevirir, nefes alır, arkasına yaslanır; moladakiler sohbet eder; bitkiler esintiyle salınır; ekranlar titreşir.
 // Görsel karolara bölünür, her karo yalnızca kendisine değen bükmeleri hesaplar (düşük GPU maliyeti).
+// Aydınlatma da burada: gündüz / akşam / gece. Işık kaynakları (ekran, lamba, aydınlatma) parlaklıklarından bulunur,
+// geceleri ortam kararır, ışıklar yerinde kalır ve parlar (bloom); pencerelerde gece şehri çizilir.
 // WebGL2 yoksa ya da kullanıcı "hareketi azalt" tercih ettiyse durağan görsel gösterilir.
 import { useEffect, useRef, useState } from 'react'
 import { PERSON_BY_ID } from '../data.js'
@@ -13,6 +15,14 @@ const MAXD = 32 // karo başına en fazla bükme
 const TCOLS = 10
 const TROWS = 5
 const FPS = 30
+// Yazılım odasının pencereleri (dünya birimi): geceleri şehir manzarası çizilir
+const WINDOWS = [168, 6, 560, 84]
+// Işık ön ayarları: amb = ışık kaynağı olmayan yüzeyler, emis = ekran/lamba parlaklığı, night = pencere manzarası
+export const LIGHTS = {
+  day: { amb: [1, 1, 1], tint: [1, 1, 1], emis: 1, bloom: 0.07, night: 0 },
+  dusk: { amb: [0.82, 0.7, 0.62], tint: [1.1, 0.97, 0.84], emis: 1.12, bloom: 0.18, night: 0.4 },
+  night: { amb: [0.22, 0.29, 0.5], tint: [0.96, 1, 1.1], emis: 1.2, bloom: 0.34, night: 1 },
+}
 
 const VS = `#version 300 es
 in vec2 aPos;
@@ -34,8 +44,26 @@ uniform int uN;
 uniform vec4 uA[${MAXD}]; // bölge: merkez x, y, yarıçap x, y
 uniform vec4 uB[${MAXD}]; // hareket: dx, dy, dönüş (rad), ölçek  · ekranda: parlaklık, tarama y, -, -
 uniform vec4 uC[${MAXD}]; // pivot x, y, -, tür (0 bükme, 1 ekran ışıması)
+uniform vec3 uAmb;   // ışık kaynağı olmayan yüzeylerin ortam çarpanı
+uniform vec3 uTint;  // genel renk tonu (akşam sıcak, gece soğuk)
+uniform float uEmis; // ışık kaynaklarının (ekran, lamba) parlaklık çarpanı
+uniform float uBloom;
+uniform float uNight; // 0 gündüz .. 1 gece (pencerelerdeki manzara için)
+uniform float uTime;
+uniform vec4 uWin;   // pencere dikdörtgeni x0, y0, x1, y1
 in vec2 vP;
 out vec4 o;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+// Işık kaynağı olasılığı: parlak ve renkli (ekranlar, lambalar); beyaz duvarlar yalnızca zayıf sayılır
+float emissive(vec3 c) {
+  float hi = max(c.r, max(c.g, c.b));
+  float lo = min(c.r, min(c.g, c.b));
+  float sat = (hi - lo) / (hi + 0.001);
+  return smoothstep(0.6, 0.92, luma(c)) * mix(0.4, 1.0, smoothstep(0.12, 0.42, sat));
+}
+
 void main() {
   vec2 off = vec2(0.0);
   float glow = 0.0;
@@ -60,7 +88,15 @@ void main() {
     vec2 r = vec2(c * q.x - s * q.y, s * q.x + c * q.y) * B.w;
     off += (r - q + B.xy) * w;
   }
-  vec4 col = texture(uTex, clamp((vP - off) / uSize, vec2(0.0), vec2(1.0)));
+  vec2 uv = clamp((vP - off) / uSize, vec2(0.0), vec2(1.0));
+  vec4 col = texture(uTex, uv);
+
+  // hafif keskinleştirme (yapay zekâ üretimi görselin yumuşaklığını giderir)
+  vec2 px = 1.0 / vec2(3344.0, 1380.0);
+  vec3 nb = texture(uTex, uv + vec2(px.x, 0.0)).rgb + texture(uTex, uv - vec2(px.x, 0.0)).rgb
+          + texture(uTex, uv + vec2(0.0, px.y)).rgb + texture(uTex, uv - vec2(0.0, px.y)).rgb;
+  col.rgb += (col.rgb - nb * 0.25) * 0.45;
+
   if (glow != 0.0) {
     float hi = max(col.r, max(col.g, col.b));
     float lo = min(col.r, min(col.g, col.b));
@@ -68,7 +104,26 @@ void main() {
     float m = smoothstep(0.42, 0.78, hi) * smoothstep(0.18, 0.42, sat);
     col.rgb += col.rgb * m * glow;
   }
-  o = vec4(col.rgb, 1.0);
+
+  vec3 c = col.rgb;
+
+  // geceleri pencerelerde şehir manzarası: koyu gökyüzü + yanan pencereler
+  if (uNight > 0.01 && vP.x > uWin.x && vP.x < uWin.z && vP.y > uWin.y && vP.y < uWin.w) {
+    vec2 cell = floor(vP / vec2(3.0, 4.0));
+    float lit = step(0.9, hash(cell)) * (0.55 + 0.45 * sin(uTime * (0.4 + hash(cell + 3.0)) + hash(cell) * 40.0));
+    float building = smoothstep(0.52, 0.2, luma(c)); // gündüz görselinde binalar koyu
+    vec3 sky = mix(vec3(0.05, 0.08, 0.2), vec3(0.12, 0.1, 0.22), (vP.y - uWin.y) / (uWin.w - uWin.y));
+    vec3 night = sky + vec3(1.0, 0.78, 0.4) * lit * building * 0.9;
+    c = mix(c, night, uNight);
+  }
+
+  // aydınlatma: ışık kaynakları yerinde kalır, diğer yüzeyler ortama göre kararır/ısınır
+  float em = emissive(c);
+  vec3 lit = c * mix(uAmb, vec3(uEmis), em) * uTint;
+  // bloom: bulanık, parlak ve renkli alanlar çevreye taşar
+  vec3 bl = textureLod(uTex, uv, 3.0).rgb * 0.55 + textureLod(uTex, uv, 5.0).rgb * 0.45;
+  lit += bl * emissive(bl) * uBloom * uTint;
+  o = vec4(lit, 1.0);
 }`
 
 // ─── Hareket yardımcıları ────────────────────────────────────────────────────
@@ -105,24 +160,24 @@ function buildRig() {
       const lean = event(t, P.lean, P.leanPh, 3.4)
       const nod = st.nod(id)
       const ty = typing(t, st)
-      o[0] = look * 1.8 + Math.sin(t * 0.55 + P.ph) * 0.35
-      o[1] = ty * 0.8 * Math.sin(t * TAU * 2.2 * P.speed + P.ph) - lean * 2.2 + nod * 2
-      o[2] = look * 0.3 + Math.sin(t * 0.47 + P.ph2) * 0.05
+      o[0] = look * 3.4 + Math.sin(t * 0.55 + P.ph) * 0.6
+      o[1] = ty * 1.2 * Math.sin(t * TAU * 2.2 * P.speed + P.ph) - lean * 4.2 + nod * 3
+      o[2] = look * 0.55 + Math.sin(t * 0.47 + P.ph2) * 0.08
       o[3] = 1
     })
     add([hx, hy + 25, 25, 19], [hx, hy + 48, 0, 0], (t, st, o) => {
       const look = event(t, P.look, P.lookPh, 2.8) * eventSign(t, P.look, P.lookPh)
       const lean = event(t, P.lean, P.leanPh, 3.4)
       o[0] = 0
-      o[1] = -lean * 1.6
-      o[2] = Math.sin(t * 0.38 + P.ph) * 0.03 + look * 0.045
-      o[3] = 1 + Math.sin(t * 1.55 + P.ph2) * 0.016 // nefes
+      o[1] = -lean * 3.2
+      o[2] = Math.sin(t * 0.38 + P.ph) * 0.05 + look * 0.085 // sandalye dönüşü
+      o[3] = 1 + Math.sin(t * 1.55 + P.ph2) * 0.024 // nefes
     })
     for (const side of [-1, 1]) {
       add([hx + side * 17, hy + 19, 9.5, 9.5], [hx + side * 17, hy + 19, 0, 0], (t, st, o) => {
         const ty = typing(t, st)
         o[0] = ty * 0.35 * Math.sin(t * TAU * 3.1 + side)
-        o[1] = ty * 1.05 * Math.sin(t * TAU * 6.4 * P.speed + P.ph + side * 1.7)
+        o[1] = ty * 1.7 * Math.sin(t * TAU * 6.4 * P.speed + P.ph + side * 1.7)
         o[2] = 0
         o[3] = 1
       })
@@ -160,33 +215,6 @@ function buildRig() {
     }
   }
 
-  // Ayakta sohbet eden ikili (Mola Odası): beden salınımı, baş sallama, el hareketleri
-  const standing = (id, hx, hy, who) => {
-    const speaking = (t) => (Math.sin(t * 0.42 + who * Math.PI) > 0 ? 1 : 0)
-    add([hx, hy + 55, 17, 64], [hx, hy + 113, 0, 0], (t, _st, o) => {
-      o[0] = 0
-      o[1] = 0
-      o[2] = Math.sin(t * 0.7 + who * 2) * 0.022 + Math.sin(t * 0.23 + who) * 0.012
-      o[3] = 1
-    })
-    add([hx, hy, 11, 12], [hx, hy + 10, 0, 0], (t, _st, o) => {
-      const sp = speaking(t)
-      o[0] = 0
-      o[1] = sp * 0.9 * Math.sin(t * 6.2) + (1 - sp) * 0.8 * Math.max(0, Math.sin(t * 2.4)) // konuşan konuşur, dinleyen başını sallar
-      o[2] = (who ? -1 : 1) * 0.07 + sp * 0.06 * Math.sin(t * 3.3)
-      o[3] = 1
-    })
-    for (const side of [-1, 1]) {
-      add([hx + side * 11, hy + 38, 10, 12], [hx + side * 9, hy + 22, 0, 0], (t, _st, o) => {
-        const sp = speaking(t)
-        o[0] = sp * 1.1 * Math.sin(t * 3.1 + side)
-        o[1] = sp * 0.9 * Math.sin(t * 2.3 + side * 2)
-        o[2] = sp * 0.06 * Math.sin(t * 2.7 + side)
-        o[3] = 1
-      })
-    }
-  }
-
   // Bitkiler: saksıdan yukarı doğru artan, esinti gibi yavaş salınım + yaprak titreşimi
   const plant = ([x, y, w, h], i) => {
     const r = rnd(1000 + i)
@@ -203,8 +231,7 @@ function buildRig() {
 
   for (const [id, [hx, hy]] of Object.entries(HEADS)) {
     if (id === 'ada') ceo(hx, hy)
-    else if (id === 'kaan') standing(id, hx, hy, 0)
-    else if (id === 'canan') standing(id, hx, hy, 1)
+    else if (id === 'kaan' || id === 'canan') continue // Mola Odası'ndaki ikili: Walkers.jsx'te ayrı figürler
     else seated(id, hx, hy, [...id].reduce((h, ch) => h * 31 + ch.charCodeAt(0), 7))
   }
   EXTRA_SEATS.forEach(([hx, hy], i) => seated(`x${i}`, hx, hy, 900 + i))
@@ -250,8 +277,9 @@ function compile(gl, type, src) {
  * nodRef.current: Map<personId, saniye> — görev paketi ulaştığında başıyla onaylama anı
  * talkRef.current: ADA şu an yanıt yazıyor mu
  * scaleRef.current: kameranın ekran ölçeği (çözünürlük seçimi için)
+ * lightRef.current: 'day' | 'dusk' | 'night'
  */
-export default function LivingPlate({ scaleRef, busyRef, nodRef, talkRef, onLoad }) {
+export default function LivingPlate({ scaleRef, busyRef, nodRef, talkRef, lightRef, onLoad }) {
   const canvasRef = useRef(null)
   const [fallback, setFallback] = useState(false)
 
@@ -282,9 +310,10 @@ export default function LivingPlate({ scaleRef, busyRef, nodRef, talkRef, onLoad
     const loc = gl.getAttribLocation(prog, 'aPos')
     gl.enableVertexAttribArray(loc)
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0)
-    const U = Object.fromEntries(['uTex', 'uSize', 'uN', 'uA', 'uB', 'uC', 'uTile'].map((n) => [n, gl.getUniformLocation(prog, n)]))
+    const U = Object.fromEntries(['uTex', 'uSize', 'uN', 'uA', 'uB', 'uC', 'uTile', 'uAmb', 'uTint', 'uEmis', 'uBloom', 'uNight', 'uTime', 'uWin'].map((n) => [n, gl.getUniformLocation(prog, n)]))
     gl.uniform2f(U.uSize, PW, PH)
     gl.uniform1i(U.uTex, 0)
+    gl.uniform4f(U.uWin, ...WINDOWS)
 
     const { D, tiles } = buildRig()
     const out = [0, 0, 0, 1]
@@ -316,10 +345,29 @@ export default function LivingPlate({ scaleRef, busyRef, nodRef, talkRef, onLoad
       gl.viewport(0, 0, canvas.width, canvas.height)
     }
 
+    // ışık ön ayarı: hedefe doğru yumuşak geçiş (gündüz ⇄ akşam ⇄ gece)
+    let lit = { ...LIGHTS.day }
+    const mixLight = (dt) => {
+      const target = LIGHTS[lightRef?.current] ?? LIGHTS.day
+      const k = Math.min(1, dt * 2.2)
+      for (const key of Object.keys(target)) {
+        if (Array.isArray(target[key])) lit[key] = target[key].map((v, i) => (lit[key]?.[i] ?? v) + (v - (lit[key]?.[i] ?? v)) * k)
+        else lit[key] = (lit[key] ?? target[key]) + (target[key] - (lit[key] ?? target[key])) * k
+      }
+      gl.uniform3fv(U.uAmb, lit.amb)
+      gl.uniform3fv(U.uTint, lit.tint)
+      gl.uniform1f(U.uEmis, lit.emis)
+      gl.uniform1f(U.uBloom, lit.bloom)
+      gl.uniform1f(U.uNight, lit.night)
+    }
+    let prevNow = 0
     const draw = (now) => {
       resize()
       st.abs = now / 1000
       const t = reduce ? 0 : (now - t0) / 1000
+      mixLight(prevNow ? Math.min(0.2, (now - prevNow) / 1000) : 1)
+      prevNow = now
+      gl.uniform1f(U.uTime, t)
       const params = D.map((d) => {
         const o = [0, 0, 0, 1]
         if (!reduce) d.f(t, st, o)
