@@ -1,4 +1,4 @@
-// Üst bar: menü · logo · ADA'ya hızlı erişim · çalışan sayacı · saat/tarih · gündüz/gece · profil
+// Üst bar: menü · logo · Kağan'a hızlı erişim · çalışan sayacı · saat/tarih · gündüz/gece · profil
 import { Menu, Moon, Sparkles, Sun, Users } from 'lucide-react'
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
@@ -22,7 +22,7 @@ function Brand() {
   )
 }
 
-// ADA'ya talimat kutusu görünümünde düğme: tıklayınca (ya da Ctrl+K) sohbet açılır
+// Kağan'a talimat kutusu görünümünde düğme: tıklayınca (ya da Ctrl+K) sohbet açılır
 function AskAda() {
   const openChat = useStore((s) => s.openChat)
   const typing = useStore((s) => s.typing)
@@ -36,7 +36,7 @@ function AskAda() {
         <Sparkles size={13} />
       </span>
       <span className="min-w-0 flex-1 truncate text-[13px] text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">
-        {typing ? 'ADA yanıtlıyor…' : 'ADA’ya bir hedef verin…'}
+        {typing ? 'Kağan yanıtlıyor…' : 'Kağan’a bir hedef verin…'}
       </span>
       <kbd className="hidden shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-slate-400 lg:block dark:border-slate-700 dark:bg-slate-800">
         Ctrl K
@@ -47,10 +47,13 @@ function AskAda() {
 
 function Staff() {
   const busy = useStore((s) => new Set(s.tasks.filter((t) => t.status === 'active').map((t) => t.owner)).size)
+  const setStaffOpen = useStore((s) => s.setStaffOpen)
   return (
-    <span
-      title={`${TOTAL} yapay zekâ çalışanı · ${busy} kişi şu an görevde`}
-      className="hidden h-9 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-semibold whitespace-nowrap text-[#13234d] lg:flex dark:border-slate-700/70 dark:bg-white/[0.03] dark:text-slate-100"
+    <button
+      type="button"
+      onClick={() => setStaffOpen(true)}
+      title={`${TOTAL} yapay zekâ çalışanı · ${busy} kişi şu an görevde — ekibi görüntüle`}
+      className="hidden h-9 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[13px] font-semibold whitespace-nowrap text-[#13234d] transition-all hover:border-sky-300 hover:shadow-[0_4px_14px_-6px_rgba(47,128,237,.35)] lg:flex dark:border-slate-700/70 dark:bg-white/[0.03] dark:text-slate-100 dark:hover:border-sky-500/40"
     >
       <span className="relative flex h-2 w-2">
         <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/70" />
@@ -58,7 +61,7 @@ function Staff() {
       </span>
       <Users size={14} className="text-slate-400" />
       {TOTAL} Çalışan
-    </span>
+    </button>
   )
 }
 

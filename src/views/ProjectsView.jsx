@@ -4,11 +4,12 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  Flag, Target,
   Bell, CircleCheck, ExternalLink, FolderKanban, GraduationCap, Handshake, Hourglass, Landmark, MapPin, Package, ScrollText,
   Send, ShieldAlert, ShieldCheck, UserPlus, Wallet, X,
 } from 'lucide-react'
-import { BOARD_BY_ID, DEPT_BY_ID } from '../data.js'
-import { useStore } from '../store.js'
+import { BOARD_BY_ID, DEPT_BY_ID, PERSON_BY_ID, PROJECTS } from '../data.js'
+import { projectStats, useStore } from '../store.js'
 import { Avatar, alpha } from '../ui/kit.jsx'
 import { GENC, SITE_URL } from './genc.js'
 import { PORTFOLIO } from './portfolio.js'
@@ -41,7 +42,7 @@ function GencSection() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-[16px] font-semibold text-ink">{GENC.name}</h2>
             <Chip color="#10b981">Canlı platform</Chip>
-            <Chip color={BOARD_BY_ID.get('operasyon').color}>ÖREN · Operasyon</Chip>
+            <Chip color={BOARD_BY_ID.get('operasyon').color}>MURAT · Operasyon</Chip>
           </div>
           <p className="mt-0.5 text-[12px] font-medium text-ink-4">{GENC.tagline}</p>
           <p className="mt-2 max-w-3xl text-[12.5px] leading-relaxed text-ink-3">{GENC.summary}</p>
@@ -95,7 +96,7 @@ function GencSection() {
                 <Chip color={board.color}>{board.chair.name}</Chip>
                 <button
                   type="button"
-                  title="ADA'ya görev ver"
+                  title="Kağan'a görev ver"
                   onClick={() => assign(`Kodaryum Genç ${m.name} modülü için ${board.short} ekibi haftalık durum raporu hazırlasın.`)}
                   className="ml-auto grid h-7 w-7 cursor-pointer place-items-center rounded-md text-ink-4 hover:bg-fg/[0.06] hover:text-ink"
                 >
@@ -220,7 +221,7 @@ function ProjectDetail({ project, onClose }) {
                 >
                   {DEV_POOL.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — {p.role} ({DEPT_BY_ID.get(p.dept).short})
+                      {p.name} {p.surname} — {p.role} ({DEPT_BY_ID.get(p.dept).short})
                     </option>
                   ))}
                 </select>
@@ -235,7 +236,7 @@ function ProjectDetail({ project, onClose }) {
                 <span className="leading-tight">
                   <span className="block text-[10.5px] text-ink-4">{k}</span>
                   <span className="text-[12.5px] font-medium text-ink-2">
-                    {p.name} · {p.role}
+                    {p.name} {p.surname} · {p.role}
                   </span>
                 </span>
               </div>
@@ -252,7 +253,7 @@ function ProjectDetail({ project, onClose }) {
             onClick={() => assign(`${project.name} projesi için ${board.short} ekibi güncel durum raporu hazırlasın; sorumlu ${team.lead.name}.`)}
             className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 px-3 py-2 text-[12px] font-medium text-white shadow-[0_6px_18px_-8px_#3b82f6]"
           >
-            <Send size={13} /> ADA’ya görev ver
+            <Send size={13} /> Kağan’a görev ver
           </button>
           <button
             type="button"
@@ -318,6 +319,103 @@ function ProjectDetail({ project, onClose }) {
   )
 }
 
+// Şu an yürütülen projeler: ilerleme, aşama adımları, bütçe, kalan gün, ekip, sıradaki kilometre taşı, riskler
+function ActiveProjects() {
+  const tasks = useStore((s) => s.tasks)
+  const askAda = useStore((s) => s.askAda)
+  const setChatProject = useStore((s) => s.setChatProject)
+  const openChat = useStore((s) => s.openChat)
+  return (
+    <section>
+      <div className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-[13px] font-semibold text-ink-2">Şu an yürütülen projeler</h2>
+        <span className="font-mono text-[11px] text-ink-4">{PROJECTS.length} proje · canlı</span>
+      </div>
+      <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr_1fr]">
+        {PROJECTS.map((p) => {
+          const st = projectStats(tasks, p.id)
+          const ms = p.milestones.find((m) => !m.done)
+          const team = [...new Set(tasks.filter((t) => t.project === p.id && t.status !== 'done').flatMap((t) => [t.owner, ...t.helpers]))]
+          return (
+            <div key={p.id} className="flex flex-col rounded-2xl border border-fg/[0.08] bg-panel/80 p-4" style={{ background: `linear-gradient(160deg, ${alpha(p.color, 0.1)}, transparent 55%)` }}>
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h3 className="text-[15px] font-bold text-ink">{p.name}</h3>
+                    <Chip color={p.color}>{p.size}</Chip>
+                  </div>
+                  <p className="mt-1 text-[12px] leading-snug text-ink-3">{p.summary}</p>
+                </div>
+                <span className="font-mono text-[22px] font-bold" style={{ color: p.color }}>%{st.progress}</span>
+              </div>
+              <div className="mt-3 flex gap-1">
+                {p.phases.map((ph, i) => (
+                  <div key={ph} className="min-w-0 flex-1">
+                    <span className="block h-1.5 rounded-full" style={{ background: i < st.phase ? p.color : i === st.phase ? alpha(p.color, 0.55) : 'rgb(148 163 184 / .25)' }} />
+                    <span className={`mt-1 block truncate text-[10px] ${i === st.phase ? 'font-bold text-ink-2' : 'text-ink-4'}`}>{ph}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 grid grid-cols-4 gap-1.5 text-center">
+                {[
+                  ['Kalan', `${st.days} gün`],
+                  ['Görev', `${st.done}/${st.total}`],
+                  ['Ekip', `${st.depts} dept`],
+                  ['Bütçe', `%${Math.round((st.spent / p.budget) * 100)}`],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-lg bg-fg/[0.04] py-1.5">
+                    <p className="font-mono text-[12.5px] font-semibold text-ink">{v}</p>
+                    <p className="text-[9.5px] text-ink-4">{k}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 flex items-start gap-1.5 text-[11.5px] text-ink-3"><Target size={13} className="mt-px shrink-0" style={{ color: p.color }} /> {p.goal}</p>
+              {ms && <p className="mt-1 flex items-center gap-1.5 text-[11.5px] text-ink-3"><Flag size={12} className="shrink-0" style={{ color: p.color }} /> Sıradaki: <b>{ms.title}</b> · {new Date(ms.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</p>}
+              {p.risks.map((r) => (
+                <p key={r.text} className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">⚠ {r.text}</p>
+              ))}
+              <div className="mt-auto flex items-center gap-2 pt-3">
+                <div className="flex -space-x-1.5">
+                  {team.slice(0, 7).map((id) => {
+                    const a = PERSON_BY_ID.get(id)
+                    return (
+                      <span key={id} title={`${a.name} ${a.surname}`} className="rounded-full bg-panel p-px">
+                        <Avatar name={a.name} color={DEPT_BY_ID.get(a.dept).color} size={24} />
+                      </span>
+                    )
+                  })}
+                  {team.length > 7 && <span className="grid h-6 w-6 place-items-center rounded-full bg-fg/[0.08] text-[10px] font-bold text-ink-3 ring-2 ring-panel">+{team.length - 7}</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatProject(p.id)
+                    openChat()
+                  }}
+                  className="ml-auto cursor-pointer rounded-lg border border-fg/[0.12] px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 hover:bg-fg/[0.05]"
+                >
+                  Sohbette aç
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatProject(p.id)
+                    askAda(`${p.name} için `)
+                  }}
+                  className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
+                  style={{ background: p.color }}
+                >
+                  Görev ver
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export default function ProjectsView() {
   const leads = useStore((s) => s.projectLeads)
   const [tab, setTab] = useState('all')
@@ -341,7 +439,7 @@ export default function ProjectsView() {
     <ViewShell
       icon={FolderKanban}
       title="Projeler"
-      subtitle="kodaryum.net ve Kodaryum Genç projeleri — ADA ve ekipleri tarafından yönetilir"
+      subtitle="Yürütülen projeler, kodaryum.net portföyü ve Kodaryum Genç — Kağan ve ekipleri tarafından yönetilir"
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <SiteBadge url={SITE_URL} label="kodaryum.net" />
@@ -380,6 +478,7 @@ export default function ProjectsView() {
 
       <div className="relative min-h-0 flex-1">
         <div className="h-full space-y-5 overflow-y-auto p-5">
+          {tab === 'all' && <ActiveProjects />}
           {tab !== 'portfolio' && <GencSection />}
           {tab !== 'genc' && (
             <section>

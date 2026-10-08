@@ -30,7 +30,7 @@ export default function AgentsView() {
     return DEPARTMENTS.map((d) => ({
       dept: d,
       people: PEOPLE.map((p, i) => ({ ...p, state: stateOf(i), load: workload(p.id, leads) })).filter(
-        (p) => p.dept === d.id && (!q || norm(`${p.name} ${p.role}`).includes(q)),
+        (p) => p.dept === d.id && (!q || norm(`${p.name} ${p.surname} ${p.role}`).includes(q)),
       ),
     })).filter((g) => g.people.length)
   }, [query, leads])
@@ -45,7 +45,7 @@ export default function AgentsView() {
       icon={Bot}
       color="#8b5cf6"
       title="AI Çalışanlar"
-      subtitle={`${PEOPLE.length - 1} yapay zekâ ajanı + CEO ADA · ${DEPARTMENTS.filter((d) => d.board).length} departman`}
+      subtitle={`${PEOPLE.length - 1} yapay zekâ ajanı + CEO Kağan · ${DEPARTMENTS.filter((d) => d.board).length} departman`}
       actions={<SearchInput value={query} onChange={setQuery} placeholder="Ajan veya rol ara…" />}
     >
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -61,7 +61,7 @@ export default function AgentsView() {
                   </span>
                   <div className="min-w-0 flex-1 leading-tight">
                     <h2 className="text-[13.5px] font-semibold text-ink">{dept.name}</h2>
-                    <p className="text-[11px] text-ink-4">{board ? `Ekip lideri ${board.chair.name}` : 'ADA’nın ofisi'}</p>
+                    <p className="text-[11px] text-ink-4">{board ? `Ekip lideri ${board.chair.name}` : 'Kağan’ın ofisi'}</p>
                   </div>
                   <button
                     type="button"
@@ -78,7 +78,7 @@ export default function AgentsView() {
                         send(`${dept.short} ekibi için yeni görev dağılımı yapılsın.`)
                         openChat()
                       }}
-                      title="Ekibe ADA üzerinden görev ver"
+                      title="Ekibe Kağan üzerinden görev ver"
                       className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg text-ink-4 hover:bg-fg/[0.06] hover:text-ink"
                     >
                       <Send size={15} />
@@ -90,7 +90,7 @@ export default function AgentsView() {
                     <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                       <Avatar name={p.name} color={dept.color} size={32} />
                       <span className="min-w-0 flex-1 leading-tight">
-                        <span className="block truncate text-[12.5px] font-semibold text-ink-2">{p.name}</span>
+                        <span className="block truncate text-[12.5px] font-semibold text-ink-2">{p.name} {p.surname}</span>
                         <span className="block truncate text-[11px] text-ink-4">{p.role}</span>
                       </span>
                       {p.load > 0 && (

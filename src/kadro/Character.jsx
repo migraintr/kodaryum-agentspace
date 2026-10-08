@@ -5,7 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
-import { aim, bakeRetarget, boneHeight, prefixOf, restMap } from './rig.js'
+import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll } from './rig.js'
 
 export const MODELS = {
   // Depodaki (sıkıştırılmış) çalışan modelleri
@@ -140,24 +140,74 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
   }, [model]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const src = useMemo(() => clone(anim.scene), [anim.scene])
+  const clips = useRef({})
+  const current = useRef(null)
   useEffect(() => {
-    mixer.stopAllAction()
-    if (action === 'type' || action === 'sit') return
+    if (action === 'type' || action === 'sit') {
+      mixer.stopAllAction()
+      current.current = null
+      return
+    }
     const name = { idle: 'idle', walk: 'walk', agree: 'agree', no: 'headShake' }[action] ?? 'idle'
-    const clip = bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+    let clip = clips.current[name]
+    if (!clip) {
+      // Aktarım her zaman bağlama pozundan yapılır. (Önceden o anki animasyonlu poz "dinlenme" sanılıyordu:
+      // yürü ↔ dur geçişlerinde iskelet her seferinde farklı bozuluyor, yürüyüş çarpıklaşıyordu.)
+      const saved = []
+      model.traverse((o) => {
+        if (!o.isBone) return
+        saved.push([o, o.quaternion.clone(), o.position.clone()])
+        const q = rest.get(baseName(o.name))
+        if (q) o.quaternion.copy(q)
+      })
+      model.updateMatrixWorld(true)
+      clip = clips.current[name] = bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+      for (const [o, q, pos] of saved) o.quaternion.copy(q), o.position.copy(pos)
+      model.updateMatrixWorld(true)
+    }
     const a = mixer.clipAction(clip)
+    a.reset()
     a.timeScale = speed
-    a.time = phase * clip.duration
     a.play()
+    if (current.current && current.current !== a) a.crossFadeFrom(current.current, 0.35, true)
+    else a.time = phase * clip.duration
+    current.current = a
   }, [action]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sit = action === 'type' || action === 'sit'
   const drop = useRef(0)
-  useFrame(({ clock }, dt) => {
+  const posed = useRef(false)
+  useEffect(() => {
+    model.visible = false // ilk poz uygulanana kadar gizli: T-pozu hiç görünmez
+    posed.current = false
+  }, [model])
+  useFrame((st, dt) => {
+    if (!posed.current && (sit ? bones.current.Hips : true)) {
+      posed.current = true
+      requestAnimationFrame(() => (model.visible = true))
+    }
     if (!sit) {
       model.position.y = 0
-      return mixer.update(dt)
+      mixer.update(dt)
+      const b = bones.current
+      if (!b.Hips || !b.LeftFoot) return
+      model.updateMatrixWorld(true)
+      // Ayakların ileri-geri farkı → kolu karşı yöne salla (sol ayak öndeyse sağ kol önde)
+      const lf = model.worldToLocal(b.LeftFoot.getWorldPosition(new THREE.Vector3()))
+      const rf = model.worldToLocal(b.RightFoot.getWorldPosition(new THREE.Vector3()))
+      const step = (lf.z - rf.z) / (Math.abs(lf.z - rf.z) + 0.35) // −1..1
+      const walking = action === 'walk'
+      const w = walking ? 0.9 : 0.55
+      for (const sd of [1, -1]) {
+        const L = sd > 0 ? 'Left' : 'Right'
+        const swing = walking ? -sd * step * 0.62 : 0
+        aim(b[`${L}Arm`], V(sd * 0.13, -1, swing), model, w)
+        aim(b[`${L}ForeArm`], V(sd * 0.05, -1, swing + 0.18 + Math.max(0, swing) * 0.5), model, w)
+        aim(b[`${L}Hand`], V(sd * 0.02, -1, swing + 0.12), model, w * 0.8)
+      }
+      return
     }
+    const { clock } = st
     // Oturma / yazma: dinlenme pozundan başlayıp her kemiği karakter uzayında hedef yöne çevir.
     // Model +Z yönüne bakar; karakterin solu +X.
     const b = bones.current
@@ -167,26 +217,59 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     model.updateMatrixWorld(true)
     const t = clock.elapsedTime + phase * 13
     const typing = action === 'type'
+    const sm = (a, z, x) => {
+      const k = Math.min(1, Math.max(0, (x - a) / (z - a)))
+      return k * k * (3 - 2 * k)
+    }
     const breath = Math.sin(t * 1.5) * 0.012
-    const glance = Math.max(0, Math.sin(t * 0.27 + phase * 5)) ** 8 // ara sıra başını kaldırıp bakar
+    const glance = Math.max(0, Math.sin(t * 0.27 + phase * 5)) ** 8 // ara sıra başını kaldırıp ofise bakar
     const lean = Math.max(0, Math.sin(t * 0.13 + phase * 3)) ** 10 // ara sıra arkasına yaslanır
-    const A = (n, x, y, z) => aim(b[n], V(x, y, z), model)
+    // Yazma atakları: düşünme/okuma araları ile kesintili yazma (0..1)
+    const burst = typing ? sm(-0.15, 0.35, Math.sin(t * 0.55 + phase * 9) + 0.6 * Math.sin(t * 1.43 + phase * 4)) * (1 - glance) * (1 - lean) : 0
+    // Sağ el ara sıra fareye geçer (yazma atağı yokken daha olası)
+    const mouse = typing ? sm(0.35, 0.7, Math.sin(t * 0.19 + phase * 7) - burst * 0.5) : 0
+    const A = (n, x, y, z, w) => aim(b[n], V(x, y, z), model, w)
 
-    A('Spine', 0, 1, 0.08 - lean * 0.22 + breath)
-    A('Spine1', 0, 1, 0.12 - lean * 0.18)
-    A('Spine2', 0, 1, 0.1 - lean * 0.1)
+    // gövde: hafif öne eğik, nefes; fareye uzanırken çok hafif döner
+    A('Spine', mouse * -0.03, 1, 0.08 - lean * 0.22 + breath)
+    A('Spine1', mouse * -0.04, 1, 0.13 - lean * 0.18 + burst * 0.02)
+    A('Spine2', 0, 1, 0.11 - lean * 0.1)
     for (const s of [1, -1]) {
       const L = s > 0 ? 'Left' : 'Right'
       A(`${L}UpLeg`, s * 0.08, -0.05, 1)
-      A(`${L}Leg`, s * 0.02, -1, 0.12)
+      A(`${L}Leg`, s * 0.02 + Math.sin(t * 0.3 + s) * 0.01, -1, 0.12)
       A(`${L}Foot`, 0, -0.35, 1)
-      A(`${L}Arm`, s * 0.32, -1, 0.42 - lean * 0.3)
-      const tap = typing ? Math.max(0, Math.sin(t * (s > 0 ? 17 : 15) + s)) * 0.06 * (1 - glance) : 0
-      A(`${L}ForeArm`, -s * 0.28, 0.05 + tap - lean * 0.4, 1)
-      A(`${L}Hand`, -s * 0.15, -0.15 - tap, 1)
+      // kollar: dirsekler gövde yanında, ön kollar klavyeye uzanır; sağ el fareye geçer
+      const m = s < 0 ? mouse : 0
+      A(`${L}Arm`, s * 0.3, -1, 0.42 - lean * 0.3 + m * 0.05)
+      // her elin kendi ritmi: tuş vuruşunda bilek ve ön kol hafif iner, el klavyede yatay kayar
+      const jit = Math.sin(t * (s > 0 ? 2.3 : 2.9) + s) * 0.03 * burst
+      const press = burst * Math.max(0, Math.sin(t * (s > 0 ? 13.7 : 15.3) + s * 2)) ** 3
+      const fx = -s * 0.28 * (1 - m) + s * 0.02 * m + jit
+      A(`${L}ForeArm`, fx, 0.04 - press * 0.05 - lean * 0.4 + m * 0.03, 1)
+      // fare: küçük daireler + tık
+      const mx = m ? Math.sin(t * 2.1) * 0.05 * m : 0
+      const click = m * Math.max(0, Math.sin(t * 3.7 + 1)) ** 16
+      // avuç klavyeye/fareye bakar: başparmak içe ve hafif yukarı (ön kol + bilek burulması)
+      const thumb = b[`${L}HandThumb1`]
+      const palm = V(-s, m ? 0.15 : 0.45, 0.1)
+      roll(b[`${L}ForeArm`], thumb, palm, model, 0.75)
+      A(`${L}Hand`, -s * 0.12 * (1 - m) + mx, -0.12 - press * 0.12 - m * 0.06, 1)
+      roll(b[`${L}Hand`], thumb, palm, model, 1)
+      // parmaklar: atak sırasında farklı ritimlerle tuşlara basar; fare elinde işaret parmağı tıklar
+      ;['Index', 'Middle', 'Ring', 'Pinky'].forEach((f, k) => {
+        const rate = 9 + ((k * 3.1 + (s > 0 ? 0 : 1.7)) % 5) * 1.6
+        const tap = m ? (f === 'Index' ? click : 0) : burst * Math.max(0, Math.sin(t * rate + k * 1.9 + s)) ** 6
+        const curl = m ? 0.55 : 0.4
+        A(`${L}Hand${f}1`, -s * (0.03 * (k - 1.5)), -curl - tap * 0.9, 1, 0.85)
+        A(`${L}Hand${f}2`, -s * 0.02 * (k - 1.5), -curl - 0.35 - tap * 0.5, 1, 0.8)
+      })
     }
-    A('Neck', 0, 1, 0.22 - glance * 0.12)
-    A('Head', Math.sin(t * 0.21 + phase) * 0.25 * glance, 1, 0.2 - glance * 0.12)
+    // baş: ekranı okur (küçük yatay göz/baş taramaları), ara sıra klavyeye, nadiren ofise bakar
+    const read = Math.sin(t * 0.85 + phase * 3) * 0.035 * (1 - glance)
+    const down = typing ? sm(0.6, 0.9, Math.sin(t * 0.37 + phase * 11)) * 0.12 : 0
+    A('Neck', read * 0.5, 1, 0.22 - glance * 0.12 + down * 0.4)
+    A('Head', read + Math.sin(t * 0.21 + phase) * 0.25 * glance + mouse * -0.04, 1, 0.2 - glance * 0.12 + down)
 
     // kalçayı oturak yüksekliğine indir (ayaklar yere değer)
     if (!drop.current) {

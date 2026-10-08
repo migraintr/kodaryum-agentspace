@@ -13,7 +13,7 @@ import { DEPT_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { ICONS, alpha } from '../ui/kit.jsx'
 import { Bookshelf, Cabinet, Chair, CoffeeTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
-import { greenery, moodboard, rugTex, stickyBoard, terrazzo } from './textures.js'
+import { greenery, moodboard, rugTex, stickyBoard, terrazzo, whiteboard } from './textures.js'
 import Agents from './Agents.jsx'
 import { BACK, C, CEO_DESK, CEO_SEAT, CHAIR_GAP, DESKS, FRONT, H, ROOMS, W } from './plan.js'
 
@@ -216,7 +216,7 @@ function Software() {
       {/* beyaz tahta (sol duvar) */}
       <mesh position={[r.x[0] + 0.13, 1.4, cz + 1]} rotation-y={Math.PI / 2}>
         <planeGeometry args={[1.8, 1]} />
-        <meshStandardMaterial color="#f7f7f4" roughness={0.3} />
+        <meshStandardMaterial map={whiteboard()} roughness={0.3} />
       </mesh>
       <Rug room={r} w={8} d={4.6} dx={0.4} dz={0.4} />
       <DeskRow id="yazilim" />
@@ -235,14 +235,14 @@ function CeoOffice() {
       {box([r.x[1] - r.x[0] - 1.4, H, 0.12], [cx + 0.7, H / 2, wz + 0.06], navy)}
       <WindowBand x={[r.x[0], r.x[0] + 1.4]} z={wz} y0={0} />
       <WindowBand x={[r.x[0] + 1.4, r.x[1]]} z={wz} y0={2.55} />
-      <WallTV kind="landscape" w={2.3} h={1.3} position={[cx, 1.6, wz + 0.14]} />
+      <WallTV kind="company" w={2.3} h={1.3} position={[cx, 1.6, wz + 0.14]} />
       <Hexagon position={[cx + 2.1, 1.75, wz + 0.14]} />
       <pointLight position={[cx + 2.1, 1.75, wz + 0.5]} color="#8fb8ff" intensity={0.8} distance={2.2} />
       <Rug room={r} w={6} d={4} dz={0.5} />
       <ExecDesk position={[CEO_DESK.x, 0, CEO_DESK.z]} rotation-y={Math.PI} />
       <Chair exec position={[CEO_SEAT.x, 0, CEO_SEAT.z]} rotation-y={Math.PI} />
-      <LoungeChair position={[cx - 1.2, 0, cz + 0.9]} rotation-y={Math.PI + 0.5} />
-      <LoungeChair position={[cx + 1.2, 0, cz + 0.9]} rotation-y={Math.PI - 0.5} />
+      <LoungeChair position={[cx - 1.15, 0, cz + 1.0]} rotation-y={-Math.PI / 2} />
+      <LoungeChair position={[cx + 1.15, 0, cz + 1.0]} rotation-y={Math.PI / 2} />
       <CoffeeTable position={[cx, 0, cz + 1.0]} />
       <Plant size={0.3} position={[cx, 0.44, cz + 1.0]} />
       <Bookshelf position={[r.x[1] - 0.9, 0, wz + 0.35]} />
@@ -305,7 +305,7 @@ function Research() {
   return (
     <group>
       <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <WallTV kind="chart" w={2.6} h={1.1} position={[cx + 0.3, 1.5, wz + 0.14]} />
+      <WallTV kind="research" w={2.6} h={1.1} position={[cx + 0.3, 1.5, wz + 0.14]} />
       <Rug room={r} w={5.8} d={3.6} dz={0.5} />
       <DeskRow id="arastirma" n0={20} />
       <Plant size={0.9} position={[r.x[1] - 0.8, 0, wz + 0.7]} />
@@ -322,12 +322,12 @@ function Accounting() {
   return (
     <group>
       <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <WallTV kind="chart" w={2.6} h={1.2} position={[cx + 0.6, 1.55, wz + 0.14]} />
+      <WallTV kind="finance" w={2.6} h={1.2} position={[cx + 0.6, 1.55, wz + 0.14]} />
       {/* arşiv dolapları (sağ duvar) ve kasa */}
       {[0, 1, 2].map((i) => (
         <group key={i} position={[r.x[1] - 0.38, 0, cz - 1.6 + i * 0.62]}>
           {box([0.5, 1.6, 0.58], [0, 0.8, 0], MAT.potDark)}
-          {[0.35, 0.8, 1.25].map((y) => box([0.02, 0.03, 0.2], [-0.26, y, 0], MAT.steel, false))}
+          {[0.35, 0.8, 1.25].map((y) => <group key={y}>{box([0.02, 0.03, 0.2], [-0.26, y, 0], MAT.steel, false)}</group>)}
         </group>
       ))}
       <group position={[r.x[1] - 0.45, 0, r.z[1] - 1.1]}>
@@ -493,6 +493,20 @@ function CameraRig() {
   return null
 }
 
+// Suspense içindeki her şey yüklendikten sonra: shader'ları önceden derle, birkaç kare bekle
+// (karakter pozları ve gölgeler otursun), sonra yükleme ekranını kaldır.
+function SceneReady() {
+  const { gl, scene, camera } = useThree()
+  const frames = useRef(0)
+  useEffect(() => {
+    gl.compile(scene, camera)
+  }, [gl, scene, camera])
+  useFrame(() => {
+    if (frames.current++ === 20) useStore.setState({ sceneReady: true })
+  })
+  return null
+}
+
 export default function HQ() {
   const dark = useStore((s) => s.theme === 'dark')
   return (
@@ -516,6 +530,7 @@ export default function HQ() {
           <Partitions />
           <RoomZones />
           <Agents />
+          <SceneReady />
         </Suspense>
         <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping minDistance={6} maxDistance={55} maxPolarAngle={1.25} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} />
         <CameraRig />

@@ -116,6 +116,18 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
     saveS.set(p.s, p.s.quaternion.clone())
     saveD.set(p.d, p.d.quaternion.clone())
   }
+  // Kalça: kaynaktaki dikey iniş-çıkış, bacak boyu oranında ölçeklenip hedefe aktarılır (ileri kayma yok)
+  const sHip = srcRoot.getObjectByName(sp + 'Hips')
+  const dHip = dstRoot.getObjectByName(dp + 'Hips')
+  const sHip0 = sHip?.getWorldPosition(new THREE.Vector3())
+  const dHip0 = dHip?.getWorldPosition(new THREE.Vector3())
+  const legOf = (root, pre, hip) => {
+    const f = root.getObjectByName(pre + 'LeftFoot')
+    return f && hip ? hip.y - f.getWorldPosition(new THREE.Vector3()).y : 1
+  }
+  const ratio = sHip && dHip ? legOf(dstRoot, dp, dHip0) / legOf(srcRoot, sp, sHip0) : 1
+  const hipValues = []
+  const hp = new THREE.Vector3()
   const mixer = new THREE.AnimationMixer(srcRoot)
   const action = mixer.clipAction(clip).play()
   const n = Math.max(2, Math.round(clip.duration * fps) + 1)
@@ -138,6 +150,12 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
       p.d.updateMatrixWorld(true)
       p.values.push(...p.d.quaternion.toArray())
     }
+    if (sHip && dHip) {
+      const dy = sHip.getWorldPosition(hp).y - sHip0.y
+      hp.copy(dHip0).setY(dHip0.y + dy * ratio)
+      dHip.parent.worldToLocal(hp)
+      hipValues.push(hp.x, hp.y, hp.z)
+    }
   }
   action.stop()
   mixer.uncacheRoot(srcRoot)
@@ -146,6 +164,7 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
   srcRoot.updateMatrixWorld(true)
   dstRoot.updateMatrixWorld(true)
   const tracks = pairs.map((p) => new THREE.QuaternionKeyframeTrack(`${dp}${p.name}.quaternion`, times, p.values))
+  if (hipValues.length) tracks.push(new THREE.VectorKeyframeTrack(`${dp}Hips.position`, times, hipValues))
   return new THREE.AnimationClip(clip.name, clip.duration, tracks)
 }
 
@@ -165,6 +184,32 @@ export function aim(bone, target, root, blend = 1) {
   _q.setFromUnitVectors(cur, want)
   if (blend < 1) _q.slerp(new THREE.Quaternion(), 1 - blend)
   // dünya dönüşünü yerel uzaya çevir: q_local' = P⁻¹ · R · P · q_local
+  bone.parent.getWorldQuaternion(_w)
+  const p = _w.clone()
+  bone.quaternion.premultiply(p.clone().invert().multiply(_q).multiply(p))
+  bone.updateMatrixWorld(true)
+}
+
+/**
+ * Kemiği kendi uzanma ekseni etrafında çevirir (bilek/ön kol burulması): `ref` nesnesinin (ör. başparmak)
+ * eksene dik yönü, karakter uzayındaki `want` yönüne döner. aim() yönü, roll() avucun bakışını belirler.
+ */
+const _c = new THREE.Vector3()
+const _d = new THREE.Vector3()
+export function roll(bone, ref, want, root, blend = 1) {
+  const child = bone && childOf(bone)
+  if (!child || !ref) return
+  bone.getWorldPosition(_a)
+  child.getWorldPosition(_b)
+  const axis = _b.sub(_a).normalize()
+  ref.getWorldPosition(_c).sub(_a)
+  _c.addScaledVector(axis, -_c.dot(axis)).normalize()
+  root.getWorldQuaternion(_w)
+  _d.copy(want).applyQuaternion(_w)
+  _d.addScaledVector(axis, -_d.dot(axis)).normalize()
+  let ang = Math.acos(Math.min(1, Math.max(-1, _c.dot(_d))))
+  if (_c.clone().cross(_d).dot(axis) < 0) ang = -ang
+  _q.setFromAxisAngle(axis, ang * blend)
   bone.parent.getWorldQuaternion(_w)
   const p = _w.clone()
   bone.quaternion.premultiply(p.clone().invert().multiply(_q).multiply(p))

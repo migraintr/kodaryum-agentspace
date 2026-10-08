@@ -1,31 +1,21 @@
 // KKM — Kodaryum AgentSpace ("dijital ikiz" arayüzü)
 // Üst bar · tam ekran ofis (canlı 3B maket) · soldan açılan menü
-// (ekranlar: görevler, departmanlar, projeler…) · sağ altta ADA ile sohbet balonu
+// (ekranlar: görevler, departmanlar, projeler…) · sağ altta Kağan ile sohbet balonu
 import { Suspense, lazy, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CircleCheck, Info, Maximize2, TriangleAlert } from 'lucide-react'
 import { useStore } from './store.js'
 import { ChatWidget } from './ui/ChatWidget.jsx'
-import { Logo } from './ui/kit.jsx'
 import { NAV } from './ui/nav.js'
 import { Sidebar } from './ui/Sidebar.jsx'
 import { TopBar } from './ui/TopBar.jsx'
+import { Loader } from './ui/Loader.jsx'
+import { StaffModal } from './ui/StaffModal.jsx'
 
 // three.js + 3B sahne ayrı parça: yalnızca 3B görünüm seçilince yüklenir
 const Scene3D = lazy(() => import('./hq/HQ.jsx'))
 // Menü ekranları (Projeler, AI Çalışanlar…) ilk açıldıklarında yüklenir
 const ViewHost = lazy(() => import('./views/index.jsx'))
-
-function SceneLoading() {
-  return (
-    <div className="absolute inset-0 grid place-items-center bg-[#0b1530]">
-      <div className="flex animate-pulse flex-col items-center gap-3">
-        <Logo size={64} />
-        <span className="font-mono text-xs tracking-[0.3em] text-sky-200/80">3B MAKET YÜKLENİYOR…</span>
-      </div>
-    </div>
-  )
-}
 
 // Kamera ilk görünümden ayrılınca (odaya odaklanma, çevirme, yakınlaştırma) sağ üstte "Genel görünüm"
 function OfficeControls() {
@@ -84,7 +74,7 @@ export default function App() {
   useEffect(() => {
     const { start, stop } = useStore.getState()
     start()
-    // ESC: sırasıyla sohbeti, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: ADA ile sohbeti aç.
+    // ESC: sırasıyla sohbeti, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: Kağan ile sohbeti aç.
     const onKey = (e) => {
       const s = useStore.getState()
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -93,6 +83,7 @@ export default function App() {
         return
       }
       if (e.key !== 'Escape') return
+      if (s.staffOpen) return // pencere kendi Esc'ini yönetir
       if (s.chatOpen) s.closeChat()
       else if (s.navOpen) s.closeNav()
       else if (s.view !== 'genel') s.setView('genel')
@@ -112,10 +103,11 @@ export default function App() {
       {/* Ofis, üst barın altındaki alanın tamamını doldurur */}
       <main className="relative min-h-0 flex-1 overflow-hidden bg-[#0b1530]">
         <div className="absolute inset-0">
-          <Suspense fallback={<SceneLoading />}>
+          <Suspense fallback={null}>
             <Scene3D stageRef={stageRef} />
           </Suspense>
           <div ref={stageRef} className="pointer-events-none absolute inset-3" />
+          <Loader />
         </div>
         <OfficeControls />
         <Toast />
@@ -130,6 +122,7 @@ export default function App() {
 
       <Sidebar />
       <ChatWidget />
+      <StaffModal />
     </div>
   )
 }

@@ -12,6 +12,10 @@ const LOOKS = [
   { model: 'man', suit: '#3d424b', vest: '#2c3038', hair: '#0f0f10', shoes: '#16171a' },
 ]
 
+// ?kadro=portre&poz=walk|type: tüm karakterler aynı hareketi yapar (animasyon incelemesi)
+const POZ = new URLSearchParams(location.search).get('poz')
+const YAN = new URLSearchParams(location.search).has('yan')
+
 export default function Portrait() {
   return (
     <div style={{ position: 'fixed', inset: 0 }}>
@@ -21,7 +25,7 @@ export default function Portrait() {
           <Environment files={lobby} environmentIntensity={0.9} />
           <directionalLight position={[2, 4, 4]} intensity={2} castShadow />
           {LOOKS.map((l, i) => (
-            <Character key={i} look={l} action={i % 2 ? 'agree' : 'idle'} phase={i * 0.2} position={[(i - 1.5) * 0.95, 0, 0]} />
+            <Character key={i} look={l} action={POZ ?? (i % 2 ? 'agree' : 'idle')} phase={i * 0.2} position={[(i - 1.5) * 0.95, 0, 0]} rotation-y={YAN ? Math.PI / 2 : 0} />
           ))}
           <ContactShadows opacity={0.5} scale={8} blur={2} />
         </Suspense>

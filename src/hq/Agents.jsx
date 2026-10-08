@@ -1,5 +1,5 @@
 // Yapay zekâ çalışanları: takım elbiseli, animasyonlu karakterler kendi departman masalarında oturup yazar;
-// ADA yönetici koltuğunda; bir çalışan koridorda dosya taşıyıp yürür. Üzerine gelince isim/rol/görev kartı.
+// Kağan yönetici koltuğunda; bir çalışan koridorda dosya taşıyıp yürür. Üzerine gelince isim/rol/görev kartı.
 import { Suspense, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
@@ -46,7 +46,7 @@ function Tag({ p }) {
   return (
     <Html position={[0, 1.75, 0]} center zIndexRange={[30, 10]} style={{ pointerEvents: 'none' }}>
       <div className="w-[190px] rounded-xl border border-slate-200 bg-white/95 p-2.5 text-slate-800 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100">
-        <p className="text-[13px] font-bold leading-tight">{p.name}</p>
+        <p className="text-[13px] font-bold leading-tight">{p.name} {p.surname}</p>
         <p className="text-[11px] text-slate-500 dark:text-slate-400">
           {p.role} · <span style={{ color: d?.color }}>{d?.name}</span>
         </p>

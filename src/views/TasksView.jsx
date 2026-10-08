@@ -1,7 +1,7 @@
-// Görevler: ADA'nın dağıttığı işler (eski alt paneldeki "Görev Dağıtımı"). Filtre, ilerleme, sorumlu ajan ve onay.
+// Görevler: Kağan'ın dağıttığı işler (eski alt paneldeki "Görev Dağıtımı"). Filtre, ilerleme, sorumlu ajan ve onay.
 import { useState } from 'react'
 import { CircleCheck, ListChecks, MessageSquarePlus, Play } from 'lucide-react'
-import { PERSON_BY_ID } from '../data.js'
+import { PERSON_BY_ID, PROJECTS, PROJECT_BY_ID } from '../data.js'
 import { deptOfTask, useStore } from '../store.js'
 import { Avatar, alpha } from '../ui/kit.jsx'
 import { Chip, Tabs, ViewShell } from './shell.jsx'
@@ -39,11 +39,12 @@ export default function TasksView() {
   const focusRoom = useStore((s) => s.focusRoom)
   const setView = useStore((s) => s.setView)
   const [filter, setFilter] = useState('all')
+  const [proj, setProj] = useState('all')
 
   const count = (st) => tasks.filter((t) => t.status === st).length
   const active = tasks.filter((t) => t.status === 'active')
   const avg = active.length ? Math.round(active.reduce((n, t) => n + t.progress, 0) / active.length) : 100
-  const list = tasks.filter((t) => filter === 'all' || t.status === filter).sort((a, b) => STATUS[a.status].order - STATUS[b.status].order || a.no - b.no)
+  const list = tasks.filter((t) => (filter === 'all' || t.status === filter) && (proj === 'all' || t.project === proj)).sort((a, b) => STATUS[a.status].order - STATUS[b.status].order || a.no - b.no)
 
   const show = (t) => {
     setView('genel')
@@ -55,7 +56,7 @@ export default function TasksView() {
       icon={ListChecks}
       color="#2f80ed"
       title="Görevler"
-      subtitle="ADA’nın ekiplere dağıttığı işler ve canlı ilerleme"
+      subtitle="Kağan’ın ekiplere dağıttığı işler ve canlı ilerleme"
       actions={
         <>
           {count('pending') > 0 && (
@@ -64,7 +65,7 @@ export default function TasksView() {
             </button>
           )}
           <button type="button" onClick={openChat} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-fg/[0.12] px-3 py-2 text-[12px] font-medium text-ink-2 hover:bg-fg/[0.05]">
-            <MessageSquarePlus size={14} /> ADA’ya yeni görev
+            <MessageSquarePlus size={14} /> Kağan’a yeni görev
           </button>
         </>
       }
@@ -80,7 +81,8 @@ export default function TasksView() {
         <Stat label="aktif" value={count('active')} color="#2f80ed" />
         <Stat label="onay bekleyen" value={count('pending')} color="#64748b" />
         <Stat label="tamamlanan" value={count('done')} color="#10b981" />
-        <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Tabs value={proj} onChange={setProj} items={[['all', 'Tüm projeler'], ...PROJECTS.map((p) => [p.id, p.short])]} />
           <Tabs
             value={filter}
             onChange={setFilter}
@@ -109,6 +111,7 @@ export default function TasksView() {
               <span className="min-w-0">
                 <span className="block truncate text-[13.5px] font-semibold text-ink">{t.title}</span>
                 <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {PROJECT_BY_ID.get(t.project) && <Chip color={PROJECT_BY_ID.get(t.project).color}>{PROJECT_BY_ID.get(t.project).short}</Chip>}
                   <Chip color={d.color}>{d.name}</Chip>
                   <Chip color={st.color}>{st.label}</Chip>
                 </span>
@@ -116,7 +119,7 @@ export default function TasksView() {
               <span className="flex items-center gap-2 sm:order-none">
                 <Avatar name={owner.name} color={d.color} size={28} />
                 <span className="leading-tight">
-                  <span className="block text-[12.5px] font-semibold text-ink-2">{owner.name}</span>
+                  <span className="block text-[12.5px] font-semibold text-ink-2">{owner.name} {owner.surname}</span>
                   <span className="block text-[10.5px] text-ink-4">{owner.role}</span>
                 </span>
               </span>

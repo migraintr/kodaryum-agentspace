@@ -25,10 +25,10 @@ const at = (id, list) => {
 export const DESKS = {
   yazilim: at('yazilim', [[-2.2, -0.2], [0.4, -0.2], [3.0, -0.2], [-1.6, 2.3], [1.4, 2.3]]),
   tasarim: at('tasarim', [[-2.2, 0.2, { dual: false, screen: 'design' }], [0.2, 0.2, { dual: false, screen: 'design' }], [2.6, 0.2, { dual: false, screen: 'design' }]]),
-  pazarlama: at('pazarlama', [[-1.4, -0.2], [1.4, -0.2], [-1.4, 2.0], [1.4, 2.0]]),
-  arastirma: at('arastirma', [[-2, 0, { scale: 0.9 }], [0, 0, { scale: 0.9, screen: 'chart' }], [2, 0, { scale: 0.9 }]]),
-  operasyon: at('operasyon', [[-1.9, 0.2], [0.6, 0.2]]),
-  muhasebe: at('muhasebe', [[-1.9, 0.1, { screen: 'chart' }], [0.6, 0.1, { screen: 'chart' }], [-0.65, 2.3, { screen: 'chart' }]]),
+  pazarlama: at('pazarlama', [[-1.4, -0.2, { screen: 'social' }], [1.4, -0.2, { screen: 'social' }], [-1.4, 2.0, { screen: 'social' }], [1.4, 2.0, { screen: 'social' }]]),
+  arastirma: at('arastirma', [[-2, 0, { scale: 0.9, screen: 'research' }], [0, 0, { scale: 0.9, screen: 'research' }], [2, 0, { scale: 0.9, screen: 'research' }]]),
+  operasyon: at('operasyon', [[-1.9, 0.2, { screen: 'monitor' }], [0.6, 0.2, { screen: 'monitor' }]]),
+  muhasebe: at('muhasebe', [[-1.9, 0.1, { screen: 'ledger' }], [0.6, 0.1, { screen: 'ledger' }], [-0.65, 2.3, { screen: 'ledger' }]]),
 }
 // CEO: yönetici masasının arkasındaki koltuk (masaya, yani +z yönüne bakar)
 const [ycx, ycz] = C(ROOM_BY_ID.get('yonetim'))
