@@ -1,5 +1,6 @@
 // KKM — uygulama durumu (Zustand): ekipler, görevler, Kağan sohbeti, seçim, canlı simülasyon, tercihler
 import { create } from 'zustand'
+import { STOPS } from './hq/tour.js'
 import {
   AGENTS, BOARDS, BOARD_BY_ID, CEO, CHAT_HISTORY, DEPT_BY_ID, PEOPLE, PERSON_BY_ID, PROJECTS, PROJECT_BY_ID, TASKS, USERS, USER_BY_ID,
 } from './data.js'
@@ -12,6 +13,18 @@ export const PRIORITY = {
   normal: { label: 'Normal', color: '#64748b', speed: 1 },
   yuksek: { label: 'Yüksek', color: '#f59e0b', speed: 1.8 },
   kritik: { label: 'Kritik', color: '#ef4444', speed: 2.8 },
+}
+
+// Açılışta tur kaydı boş kalmasın: önceki iki turun kontrolleri (yaklaşık 9 dk arayla odalar)
+function seedTourLog() {
+  const out = []
+  const now = Date.now()
+  for (let lap = 1; lap <= 2; lap++)
+    STOPS.forEach((st, k) => {
+      const [level, note] = st.notes[(lap + k) % st.notes.length]
+      out.push({ at: now - (lap * STOPS.length - k) * 9 * 60_000, room: st.room, note, level })
+    })
+  return out.sort((a, b) => b.at - a.at)
 }
 
 const round1 = (v) => Math.round(v * 10) / 10
@@ -263,6 +276,20 @@ export const useStore = create((set, get) => ({
   askAda: (text) => set({ chatOpen: true, unread: 0, chatDraft: text }),
   staffOpen: false, // üst bardaki "Çalışan" penceresi
   setStaffOpen: (staffOpen) => set({ staffOpen }),
+  // Operasyon turu (hq/tour.js): şu an hangi odada / nereye gidiyor + son kontroller (en yeni başta)
+  opsTour: { status: 'walking', room: null, next: STOPS[0].room, note: null, level: 'ok', log: seedTourLog() },
+  tourEvent: (patch, entry) =>
+    set((s) => ({ opsTour: { ...s.opsTour, ...patch, log: entry ? [entry, ...s.opsTour.log].slice(0, 60) : s.opsTour.log } })),
+  // Departman panosu: tam ekran (departman kimliği ya da null) ve oda panelinin ekranı kapladığı alan (kamera ortalaması için)
+  deptFull: null,
+  openDeptFull: (id, tab) => set({ deptFull: id, deptTab: tab ?? null }),
+  closeDeptFull: () => set({ deptFull: null }),
+  deptTab: null,
+  viewInset: { l: 0, r: 0, t: 0, b: 0 },
+  setViewInset: (v) => {
+    const c = get().viewInset
+    if (c.l !== v.l || c.r !== v.r || c.t !== v.t || c.b !== v.b) set({ viewInset: v })
+  },
   calOpen: false, // üst bardaki saat/tarih: takvim penceresi
   setCalOpen: (calOpen) => set({ calOpen }),
   closeChat: () => set({ chatOpen: false }),

@@ -10,8 +10,9 @@ import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll } from
 
 export const MODELS = {
   // Depodaki (sıkıştırılmış) çalışan modelleri
-  man: '/agents/man.glb',
-  woman: '/agents/woman.glb',
+  // (src/assets altında: derlemede dosya adına içerik özeti eklenir → tarayıcı önbelleğinde kalıcı tutulur)
+  man: new URL('../assets/agents/man.glb', import.meta.url).href,
+  woman: new URL('../assets/agents/woman.glb', import.meta.url).href,
   // Yerel deneme modelleri (public/models, depoda yok)
   m: '/models/readyplayer.me.glb',
   f: '/models/Michelle.glb',
@@ -20,7 +21,7 @@ export const MODELS = {
   avatarsdk: '/models/avatarsdk.glb',
   brunette: '/models/brunette.glb',
 }
-const ANIMS = '/agents/anims.glb'
+const ANIMS = new URL('../assets/agents/anims.glb', import.meta.url).href
 ;[MODELS.man, MODELS.woman].forEach((u) => useGLTF.preload(u))
 useGLTF.preload(ANIMS)
 
@@ -70,7 +71,9 @@ function dye(mat, color, strength = 1) {
 const V = (x, y, z) => new THREE.Vector3(x, y, z)
 export const SEAT_H = 0.5 // sandalye oturak yüksekliği (m)
 
-export default function Character({ look, action = 'idle', height = 1.75, speed = 1, phase = 0, ...props }) {
+// speed: animasyon hız çarpanı · moveSpeed (m/sn): yürürken karakterin gerçek ilerleme hızı — verilirse yürüyüş
+// animasyonu adım uzunluğuna göre bu hıza eşlenir (ayaklar yerde kaymaz)
+export default function Character({ look, action = 'idle', height = 1.75, speed = 1, moveSpeed, phase = 0, ...props }) {
   const { scene } = useGLTF(MODELS[look.model])
   const anim = useGLTF(ANIMS)
   const model = useMemo(() => clone(scene), [scene])
@@ -168,12 +171,22 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     }
     const a = mixer.clipAction(clip)
     a.reset()
-    a.timeScale = speed
+    a.timeScale = timeScaleOf(clip)
     a.play()
-    if (current.current && current.current !== a) a.crossFadeFrom(current.current, 0.35, true)
+    if (current.current && current.current !== a) a.crossFadeFrom(current.current, name === 'walk' ? 0.28 : 0.4, true)
     else a.time = phase * clip.duration
     current.current = a
   }, [action]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Hız değişince (ör. dönüşte yavaşlama) yürüyüş temposu da değişir
+  useEffect(() => {
+    const a = current.current
+    if (a) a.timeScale = timeScaleOf(a.getClip())
+  }, [moveSpeed, speed]) // eslint-disable-line react-hooks/exhaustive-deps
+  function timeScaleOf(clip) {
+    const g = clip.userData?.groundSpeed
+    if (clip.name === 'walk' && moveSpeed != null && g > 0.05) return Math.min(2.2, Math.max(0.35, moveSpeed / g))
+    return speed
+  }
 
   const sit = action === 'type' || action === 'sit'
   const drop = useRef(0)
@@ -193,20 +206,17 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       model.position.y = 0
       mixer.update(dt)
       const b = bones.current
-      if (!b.Hips || !b.LeftFoot) return
+      if (!b.Hips || !b.LeftFoot || action === 'walk') return // yürüyüş: mocap kol salınımı olduğu gibi kalır
+      // Ayakta durma (idle, onay, baş sallama): kaynak animasyonun geniş bacak duruşu toparlanır, kollar yanda
       model.updateMatrixWorld(true)
-      // Ayakların ileri-geri farkı → kolu karşı yöne salla (sol ayak öndeyse sağ kol önde)
-      const lf = model.worldToLocal(b.LeftFoot.getWorldPosition(new THREE.Vector3()))
-      const rf = model.worldToLocal(b.RightFoot.getWorldPosition(new THREE.Vector3()))
-      const step = (lf.z - rf.z) / (Math.abs(lf.z - rf.z) + 0.35) // −1..1
-      const walking = action === 'walk'
-      const w = walking ? 0.9 : 0.55
       for (const sd of [1, -1]) {
         const L = sd > 0 ? 'Left' : 'Right'
-        const swing = walking ? -sd * step * 0.62 : 0
-        aim(b[`${L}Arm`], V(sd * 0.13, -1, swing), model, w)
-        aim(b[`${L}ForeArm`], V(sd * 0.05, -1, swing + 0.18 + Math.max(0, swing) * 0.5), model, w)
-        aim(b[`${L}Hand`], V(sd * 0.02, -1, swing + 0.12), model, w * 0.8)
+        aim(b[`${L}UpLeg`], V(sd * 0.06, -1, 0.01), model, 0.85)
+        aim(b[`${L}Leg`], V(sd * 0.02, -1, -0.02), model, 0.85)
+        aim(b[`${L}Foot`], V(sd * 0.16, -0.5, 1), model, 0.8)
+        aim(b[`${L}Arm`], V(sd * 0.13, -1, 0), model, 0.55)
+        aim(b[`${L}ForeArm`], V(sd * 0.05, -1, 0.18), model, 0.55)
+        aim(b[`${L}Hand`], V(sd * 0.02, -1, 0.12), model, 0.45)
       }
       return
     }

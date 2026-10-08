@@ -20,6 +20,19 @@ const Scene3D = lazy(() => import('./hq/HQ.jsx'))
 const VIEWS = deferred(() => import('./views/index.jsx'))
 const STAFF = deferred(() => import('./ui/StaffModal.jsx'))
 const CALENDAR = deferred(() => import('./ui/CalendarModal.jsx'))
+const ROOM = deferred(() => import('./ui/dept/RoomPanels.jsx'))
+const DASH = deferred(() => import('./ui/dept/DeptDashboard.jsx'))
+
+// Oda panelleri: ilk oda seçiminde yüklenir, sonra bağlı kalır (kapanış animasyonu)
+function RoomSlot() {
+  const want = useStore((s) => !!s.roomId)
+  const seen = useRef(false)
+  if (want) seen.current = true
+  const mod = ROOM.useModule(seen.current)
+  if (!mod) return null
+  const Panels = mod.default
+  return <Panels />
+}
 
 function ViewSlot() {
   const view = useStore((s) => s.view)
@@ -42,7 +55,7 @@ function OnceOpen({ flag, mod: m, name }) {
 
 // Kamera ilk görünümden ayrılınca (odaya odaklanma, çevirme, yakınlaştırma) sağ üstte "Genel görünüm"
 function OfficeControls() {
-  const show = useStore((s) => !!s.roomId || s.camMoved)
+  const show = useStore((s) => !s.roomId && s.camMoved) // oda seçiliyken paneldeki "Genel" düğmesi var
   const resetView = useStore((s) => s.resetView)
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-20">
@@ -100,7 +113,7 @@ export default function App() {
     const unsub = useStore.subscribe((st) => {
       if (!st.sceneReady) return
       unsub()
-      whenIdle(() => [VIEWS, STAFF, CALENDAR].forEach((m) => m.get()))
+      whenIdle(() => [VIEWS, STAFF, CALENDAR, ROOM, DASH].forEach((m) => m.get()))
     })
     // ESC: sırasıyla sohbeti, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: Kağan ile sohbeti aç.
     const onKey = (e) => {
@@ -111,7 +124,7 @@ export default function App() {
         return
       }
       if (e.key !== 'Escape') return
-      if (s.staffOpen || s.calOpen) return // pencere kendi Esc'ini yönetir
+      if (s.staffOpen || s.calOpen || s.deptFull) return // pencere kendi Esc'ini yönetir
       if (s.chatOpen) s.closeChat()
       else if (s.navOpen) s.closeNav()
       else if (s.view !== 'genel') s.setView('genel')
@@ -139,6 +152,7 @@ export default function App() {
           <Loader />
         </div>
         <OfficeControls />
+        <RoomSlot />
         <Toast />
 
         {/* Soldaki menüden açılan ekran ofisin üstünde süzülür */}
@@ -149,6 +163,7 @@ export default function App() {
       <ChatWidget />
       <OnceOpen flag="staffOpen" mod={STAFF} name="StaffModal" />
       <OnceOpen flag="calOpen" mod={CALENDAR} name="CalendarModal" />
+      <OnceOpen flag="deptFull" mod={DASH} name="default" />
     </div>
   )
 }

@@ -455,10 +455,14 @@ function setHome(aspect) {
   HOME.pos.copy(BASE.target).addScaledVector(BASE.pos.clone().sub(BASE.target), HOME.k)
 }
 setHome(typeof innerWidth === 'number' ? innerWidth / Math.max(1, innerHeight) : 1.6)
-function roomGoal(r, aspect) {
+// Oda görünümü: oda, panellerin (store.viewInset) bıraktığı boş alana sığacak uzaklıkta
+function roomGoal(r, size, inset) {
   const [cx, cz] = C(r)
   const t = new THREE.Vector3(cx, 0.6, cz)
-  return { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5).multiplyScalar(clamp(0.95 / aspect, 1, 2.2))) }
+  const fw = Math.max(120, size.width - inset.l - inset.r)
+  const fh = Math.max(120, size.height - inset.t - inset.b)
+  const k = clamp(0.95 / (fw / fh), 1, 2.6) * (size.height / fh)
+  return { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5).multiplyScalar(k)) }
 }
 function CameraRig() {
   const roomId = useStore((s) => s.roomId)
@@ -466,16 +470,18 @@ function CameraRig() {
   const controls = useThree((s) => s.controls)
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
+  const inset = useStore((s) => s.viewInset)
   const goal = useRef(null)
+  const off = useRef({ x: 0, y: 0 })
   const aspect = size.width / Math.max(1, size.height)
   useEffect(() => {
     setHome(aspect)
     if (controls) controls.maxDistance = 55 * HOME.k
     const r = ROOMS.find((x) => x.id === roomId)
     // kullanıcı kamerayı kendisi oynattıysa (ve oda seçili değilse) yeniden boyutlamada yerinde bırak
-    if (r) goal.current = roomGoal(r, aspect)
+    if (r) goal.current = roomGoal(r, size, inset)
     else if (!useStore.getState().camMoved || camReset) goal.current = HOME
-  }, [roomId, camReset, aspect, controls]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [roomId, camReset, aspect, controls, inset]) // eslint-disable-line react-hooks/exhaustive-deps
   // Kullanıcı sürükleyip yakınlaştırınca: süzülmeyi bırak, "Genel görünüm" düğmesini göster
   useEffect(() => {
     if (!controls) return
@@ -493,6 +499,19 @@ function CameraRig() {
     }
   }, [controls, camera])
   useFrame((_, dt) => {
+    // Görüntü kaydırma: sahnenin merkezi panellerin arasındaki boş alanın merkezine kayar (yumuşak geçiş)
+    const o = off.current
+    const tx = (inset.l - inset.r) / 2
+    const ty = (inset.t - inset.b) / 2
+    if (Math.abs(o.x - tx) > 0.25 || Math.abs(o.y - ty) > 0.25) {
+      const q = 1 - Math.exp(-dt * 5)
+      o.x += (tx - o.x) * q
+      o.y += (ty - o.y) * q
+      if (Math.abs(o.x) < 0.3 && Math.abs(o.y) < 0.3 && !tx && !ty) {
+        o.x = o.y = 0
+        camera.clearViewOffset()
+      } else camera.setViewOffset(size.width, size.height, -o.x, -o.y, size.width, size.height)
+    }
     const g = goal.current
     if (!g || !controls) return
     const k = 1 - Math.exp(-dt * 3)
