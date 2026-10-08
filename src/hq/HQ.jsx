@@ -11,6 +11,7 @@ import * as THREE from 'three'
 import lobby from '@pmndrs/assets/hdri/lobby.exr'
 import { DEPT_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
+import { PERF } from '../perf.js'
 import { ICONS, alpha } from '../ui/kit.jsx'
 import { Bookshelf, Cabinet, Chair, CoffeeTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
 import { greenery, moodboard, rugTex, stickyBoard, terrazzo, whiteboard } from './textures.js'
@@ -444,22 +445,37 @@ function RoomZones() {
   })
 }
 
-const HOME = { target: new THREE.Vector3(0, 0, -0.2), pos: new THREE.Vector3(0, 21, 23) }
+// Kamera: dar (dikey) ekranlarda ofisin tamamı sığsın diye uzaklaşır; en-boy oranı değişince (döndürme, yeniden boyutlama) güncellenir
+const BASE = { target: new THREE.Vector3(0, 0, -0.2), pos: new THREE.Vector3(0, 21, 23) }
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
+const fitK = (aspect) => clamp(1.25 / aspect, 1, 2.6)
+const HOME = { target: BASE.target.clone(), pos: BASE.pos.clone(), k: 1 }
+function setHome(aspect) {
+  HOME.k = fitK(aspect)
+  HOME.pos.copy(BASE.target).addScaledVector(BASE.pos.clone().sub(BASE.target), HOME.k)
+}
+setHome(typeof innerWidth === 'number' ? innerWidth / Math.max(1, innerHeight) : 1.6)
+function roomGoal(r, aspect) {
+  const [cx, cz] = C(r)
+  const t = new THREE.Vector3(cx, 0.6, cz)
+  return { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5).multiplyScalar(clamp(0.95 / aspect, 1, 2.2))) }
+}
 function CameraRig() {
   const roomId = useStore((s) => s.roomId)
   const camReset = useStore((s) => s.camReset)
   const controls = useThree((s) => s.controls)
   const camera = useThree((s) => s.camera)
+  const size = useThree((s) => s.size)
   const goal = useRef(null)
+  const aspect = size.width / Math.max(1, size.height)
   useEffect(() => {
+    setHome(aspect)
+    if (controls) controls.maxDistance = 55 * HOME.k
     const r = ROOMS.find((x) => x.id === roomId)
-    if (!r) goal.current = HOME
-    else {
-      const [cx, cz] = C(r)
-      const t = new THREE.Vector3(cx, 0.6, cz)
-      goal.current = { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5)) }
-    }
-  }, [roomId, camReset])
+    // kullanıcı kamerayı kendisi oynattıysa (ve oda seçili değilse) yeniden boyutlamada yerinde bırak
+    if (r) goal.current = roomGoal(r, aspect)
+    else if (!useStore.getState().camMoved || camReset) goal.current = HOME
+  }, [roomId, camReset, aspect, controls]) // eslint-disable-line react-hooks/exhaustive-deps
   // Kullanıcı sürükleyip yakınlaştırınca: süzülmeyi bırak, "Genel görünüm" düğmesini göster
   useEffect(() => {
     if (!controls) return
@@ -511,12 +527,12 @@ export default function HQ() {
   const dark = useStore((s) => s.theme === 'dark')
   return (
     <div className="absolute inset-0">
-      <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
+      <Canvas shadows dpr={PERF.dpr} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
         <color attach="background" args={[dark ? '#0d1117' : '#eef0f2']} />
         <Suspense fallback={null}>
           <Environment files={lobby} environmentIntensity={dark ? 0.25 : 0.75} />
           <hemisphereLight args={['#eef4ff', '#b9bcc2', dark ? 0.15 : 0.45]} />
-          <directionalLight position={[-12, 22, 14]} intensity={dark ? 0.4 : 2.3} color="#ffffff" castShadow shadow-mapSize={[4096, 4096]} shadow-bias={-0.0002} shadow-normalBias={0.025}>
+          <directionalLight position={[-12, 22, 14]} intensity={dark ? 0.4 : 2.3} color="#ffffff" castShadow shadow-mapSize={[PERF.shadowMap, PERF.shadowMap]} shadow-bias={-0.0002} shadow-normalBias={0.025}>
             <orthographicCamera attach="shadow-camera" args={[-18, 18, 12, -12, 1, 60]} />
           </directionalLight>
           <Shell />
@@ -532,14 +548,16 @@ export default function HQ() {
           <Agents />
           <SceneReady />
         </Suspense>
-        <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping minDistance={6} maxDistance={55} maxPolarAngle={1.25} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} />
+        <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping minDistance={6} maxDistance={55 * HOME.k} maxPolarAngle={1.25} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} />
         <CameraRig />
-        <EffectComposer multisampling={0}>
-          <N8AO aoRadius={0.6} intensity={1.6} distanceFalloff={1} />
-          <Bloom intensity={dark ? 0.8 : 0.35} luminanceThreshold={0.82} mipmapBlur />
-          <ToneMapping mode={ToneMappingMode.NEUTRAL} />
-          <SMAA />
-        </EffectComposer>
+        {PERF.post && (
+          <EffectComposer multisampling={0}>
+            {PERF.ao && <N8AO aoRadius={0.6} intensity={1.6} distanceFalloff={1} />}
+            {PERF.bloom && <Bloom intensity={dark ? 0.8 : 0.35} luminanceThreshold={0.82} mipmapBlur />}
+            <ToneMapping mode={ToneMappingMode.NEUTRAL} />
+            {PERF.smaa && <SMAA />}
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   )

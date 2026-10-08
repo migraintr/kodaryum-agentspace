@@ -25,8 +25,8 @@ function Ring({ value, size = 56 }) {
 
 function Stat({ label, value, color }) {
   return (
-    <div className="rounded-xl border border-fg/[0.08] bg-fg/[0.03] px-4 py-2.5">
-      <p className="font-mono text-[20px] font-semibold" style={{ color }}>{value}</p>
+    <div className="rounded-xl border border-fg/[0.08] bg-fg/[0.03] px-3 py-2 sm:px-4 sm:py-2.5">
+      <p className="font-mono text-[17px] sm:text-[20px] font-semibold" style={{ color }}>{value}</p>
       <p className="text-[11px] text-ink-4">{label}</p>
     </div>
   )
@@ -70,8 +70,8 @@ export default function TasksView() {
         </>
       }
     >
-      <div className="flex flex-wrap items-center gap-3 border-b border-fg/[0.07] px-5 py-3">
-        <div className="flex items-center gap-3 rounded-xl border border-fg/[0.08] bg-fg/[0.03] px-4 py-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-fg/[0.07] px-3 py-3 sm:gap-3 sm:px-5">
+        <div className="flex items-center gap-3 rounded-xl border border-fg/[0.08] bg-fg/[0.03] px-3 py-2 sm:px-4">
           <Ring value={avg} />
           <div className="leading-tight">
             <p className="font-mono text-[20px] font-semibold text-ink">%{avg}</p>
@@ -81,7 +81,7 @@ export default function TasksView() {
         <Stat label="aktif" value={count('active')} color="#2f80ed" />
         <Stat label="onay bekleyen" value={count('pending')} color="#64748b" />
         <Stat label="tamamlanan" value={count('done')} color="#10b981" />
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="no-scrollbar flex w-full gap-2 overflow-x-auto sm:ml-auto sm:w-auto sm:flex-wrap">
           <Tabs value={proj} onChange={setProj} items={[['all', 'Tüm projeler'], ...PROJECTS.map((p) => [p.id, p.short])]} />
           <Tabs
             value={filter}
@@ -91,7 +91,7 @@ export default function TasksView() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 pb-20 sm:p-5">
         {list.length === 0 && <p className="py-12 text-center text-[13px] text-ink-4">Bu filtrede görev yok.</p>}
         {list.map((t) => {
           const owner = PERSON_BY_ID.get(t.owner)

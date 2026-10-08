@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
+import { PERF } from '../perf.js'
 import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll } from './rig.js'
 
 export const MODELS = {
@@ -177,6 +178,8 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
   const sit = action === 'type' || action === 'sit'
   const drop = useRef(0)
   const posed = useRef(false)
+  const frame = useRef(0)
+  const acc = useRef(0)
   useEffect(() => {
     model.visible = false // ilk poz uygulanana kadar gizli: T-pozu hiç görünmez
     posed.current = false
@@ -207,6 +210,10 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       }
       return
     }
+    // Oturan çalışanın prosedürel pozu pahalı (kemik başına dünya matrisi): zayıf cihazlarda her N karede bir
+    acc.current += dt
+    if (posed.current && frame.current++ % PERF.seatedEvery) return
+    acc.current = 0
     const { clock } = st
     // Oturma / yazma: dinlenme pozundan başlayıp her kemiği karakter uzayında hedef yöne çevir.
     // Model +Z yönüne bakar; karakterin solu +X.

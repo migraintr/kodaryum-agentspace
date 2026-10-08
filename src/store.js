@@ -263,6 +263,8 @@ export const useStore = create((set, get) => ({
   askAda: (text) => set({ chatOpen: true, unread: 0, chatDraft: text }),
   staffOpen: false, // üst bardaki "Çalışan" penceresi
   setStaffOpen: (staffOpen) => set({ staffOpen }),
+  calOpen: false, // üst bardaki saat/tarih: takvim penceresi
+  setCalOpen: (calOpen) => set({ calOpen }),
   closeChat: () => set({ chatOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, unread: 0 })),
   toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
@@ -444,7 +446,7 @@ export const useStore = create((set, get) => ({
   },
 
   start: () => {
-    simulation ??= setInterval(() => get().tick(), 2500)
+    simulation ??= setInterval(() => !document.hidden && get().tick(), 2500) // sekme arka plandayken simülasyon durur (pil/CPU)
   },
   stop: () => {
     clearInterval(simulation)
