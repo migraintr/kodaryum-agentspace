@@ -14,24 +14,11 @@ import { useStore } from '../store.js'
 import { ICONS, alpha } from '../ui/kit.jsx'
 import { Bookshelf, Cabinet, Chair, CoffeeTable, ConferenceTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
 import { greenery, moodboard, rugTex, slats, stickyBoard, terrazzo } from './textures.js'
+import Agents from './Agents.jsx'
+import { BACK, C, CEO_DESK, CEO_SEAT, CHAIR_GAP, DESKS, FRONT, H, ROOMS, W } from './plan.js'
 
-// ─── Kat planı ────────────────────────────────────────────────────────────────
-const W = 30
-const BACK = [-9, -2] // arka sıra z aralığı
-const FRONT = [1, 8] // ön sıra z aralığı
 const T = 0.35 // dış duvar kalınlığı
-const H = 2.8 // tavan / tam duvar yüksekliği
-
-export const ROOMS = [
-  { id: 'yazilim', x: [-15, -5], z: BACK, accent: '#1f4f8f', rug: '#58779b' },
-  { id: 'yonetim', x: [-5, 5], z: BACK, accent: '#25315c', rug: '#7d828b' },
-  { id: 'tasarim', x: [5, 15], z: BACK, accent: '#b8737b', rug: '#c48d91' },
-  { id: 'pazarlama', x: [-15, -7.5], z: FRONT, accent: '#d4682c', rug: '#c46a33' },
-  { id: 'arastirma', x: [-7.5, 0], z: FRONT, accent: '#7a55c4', rug: '#6e54a8' },
-  { id: 'toplanti', x: [0, 7.5], z: FRONT, accent: '#ead3a6', rug: '#d8c8aa' },
-  { id: 'operasyon', x: [7.5, 15], z: FRONT, accent: '#1f6f45', rug: '#6f8c6b' },
-]
-const C = (r) => [(r.x[0] + r.x[1]) / 2, (r.z[0] + r.z[1]) / 2]
+export { ROOMS }
 
 const glassMat = new THREE.MeshPhysicalMaterial({ color: '#d6e6ee', roughness: 0.04, transparent: true, opacity: 0.16, depthWrite: false, envMapIntensity: 1.4 })
 const frameMat = new THREE.MeshStandardMaterial({ color: '#1b1d21', roughness: 0.35, metalness: 0.7 })
@@ -159,6 +146,16 @@ function Shell() {
   )
 }
 
+
+function DeskRow({ id, n0 = 0 }) {
+  return DESKS[id].map((d, i) => (
+    <group key={i}>
+      <Desk n={n0 + i * 2} dual={d.dual ?? true} screen={d.screen ?? 'code'} position={[d.x, 0, d.z]} scale={[d.scale ?? 1, 1, 1]} />
+      <Chair position={[d.x, 0, d.z + CHAIR_GAP]} />
+    </group>
+  ))
+}
+
 // ─── Arka sıra ──────────────────────────────────────────────────────────────
 function Software() {
   const r = ROOMS[0]
@@ -185,16 +182,7 @@ function Software() {
         <meshStandardMaterial color="#f7f7f4" roughness={0.3} />
       </mesh>
       <Rug room={r} w={8} d={4.6} dx={0.4} dz={0.4} />
-      {[-2.6, 0, 2.6].map((dx, i) => (
-        <group key={dx}>
-          <Desk n={i * 2} position={[cx + dx + 0.4, 0, cz - 0.2]} />
-          <Chair position={[cx + dx + 0.4, 0, cz + 0.45]} />
-        </group>
-      ))}
-      <Desk n={7} position={[cx - 1.6, 0, cz + 2.3]} />
-      <Chair position={[cx - 1.6, 0, cz + 2.95]} />
-      <Plant size={0.3} position={[cx - 3.2, 0.76, cz - 0.4]} />
-      <Plant size={0.3} position={[cx + 1.6, 0.76, cz - 0.4]} />
+      <DeskRow id="yazilim" />
     </group>
   )
 }
@@ -214,8 +202,8 @@ function CeoOffice() {
       <Hexagon position={[cx + 2.1, 1.75, wz + 0.14]} />
       <pointLight position={[cx + 2.1, 1.75, wz + 0.5]} color="#8fb8ff" intensity={0.8} distance={2.2} />
       <Rug room={r} w={6} d={4} dz={0.5} />
-      <ExecDesk position={[cx, 0, cz - 1.1]} rotation-y={Math.PI} />
-      <Chair exec position={[cx, 0, cz - 1.95]} rotation-y={Math.PI} />
+      <ExecDesk position={[CEO_DESK.x, 0, CEO_DESK.z]} rotation-y={Math.PI} />
+      <Chair exec position={[CEO_SEAT.x, 0, CEO_SEAT.z]} rotation-y={Math.PI} />
       <LoungeChair position={[cx - 1.2, 0, cz + 0.9]} rotation-y={Math.PI + 0.5} />
       <LoungeChair position={[cx + 1.2, 0, cz + 0.9]} rotation-y={Math.PI - 0.5} />
       <CoffeeTable position={[cx, 0, cz + 1.0]} />
@@ -243,12 +231,7 @@ function Design() {
       {/* uzun alçak dolap */}
       {box([6.5, 0.7, 0.45], [cx + 0.4, 0.35, wz + 0.35], MAT.pedestal)}
       <Rug room={r} w={7.2} d={3.6} dx={0.2} dz={0.6} />
-      {[-2.4, 0, 2.4].map((dx, i) => (
-        <group key={dx}>
-          <Desk dual={false} screen="design" n={i} position={[cx + dx + 0.2, 0, cz + 0.2]} />
-          <Chair position={[cx + dx + 0.2, 0, cz + 0.85]} />
-        </group>
-      ))}
+      <DeskRow id="tasarim" />
       {/* sağ duvar rafı */}
       {box([0.4, 2, 1.6], [r.x[1] - 0.3, 1, cz - 0.5], MAT.potDark)}
       <Plant size={1.2} position={[r.x[1] - 0.7, 0, wz + 0.5]} />
@@ -269,13 +252,8 @@ function Marketing() {
         <planeGeometry args={[2.4, 1.2]} />
         <meshStandardMaterial map={stickyBoard()} roughness={0.5} />
       </mesh>
-      <Rug room={r} w={5.8} d={3.4} dz={0.5} />
-      {[-1.4, 1.4].map((dx, i) => (
-        <group key={dx}>
-          <Desk n={10 + i * 2} position={[cx + dx, 0, cz + 0.1]} />
-          <Chair position={[cx + dx, 0, cz + 0.75]} />
-        </group>
-      ))}
+      <Rug room={r} w={5.8} d={5} dz={0.9} />
+      <DeskRow id="pazarlama" n0={10} />
       <Cabinet w={1} position={[r.x[1] - 1.2, 0, wz + 0.35]} />
       <Plant size={1.0} position={[r.x[0] + 0.8, 0, wz + 0.6]} />
       <Plant size={1.0} position={[r.x[1] - 0.6, 0, wz + 0.6]} />
@@ -292,12 +270,7 @@ function Research() {
       <AccentWall x={r.x} z={wz} color={r.accent} />
       <WallTV kind="chart" w={2.6} h={1.1} position={[cx, 1.5, wz + 0.14]} />
       <Rug room={r} w={5.8} d={3.6} dz={0.5} />
-      {[-2, 0, 2].map((dx, i) => (
-        <group key={dx}>
-          <Desk n={20 + i * 2} screen={i === 1 ? 'chart' : 'code'} position={[cx + dx, 0, cz]} scale={[0.9, 1, 1]} />
-          <Chair position={[cx + dx, 0, cz + 0.65]} />
-        </group>
-      ))}
+      <DeskRow id="arastirma" n0={20} />
       <Plant size={0.9} position={[r.x[1] - 0.8, 0, wz + 0.7]} />
       <Plant size={0.9} position={[r.x[0] + 0.8, 0, r.z[1] - 0.6]} dark />
     </group>
@@ -341,12 +314,7 @@ function Operations() {
       <WallTV kind="map" w={2.8} h={1.4} position={[cx - 0.8, 1.6, wz + 0.14]} />
       {[0, 1, 2].map((i) => <Rack key={i} position={[r.x[1] - 2.4 + i * 0.65, 0, wz + 0.6]} />)}
       <Rug room={r} w={5.2} d={3.4} dx={-0.6} dz={0.5} />
-      {[-1.9, 0.6].map((dx, i) => (
-        <group key={dx}>
-          <Desk n={30 + i * 2} position={[cx + dx, 0, cz + 0.2]} />
-          <Chair position={[cx + dx, 0, cz + 0.85]} />
-        </group>
-      ))}
+      <DeskRow id="operasyon" n0={30} />
       <Plant size={1.0} position={[r.x[0] + 0.7, 0, wz + 1.6]} />
       <Plant size={1.2} position={[r.x[1] - 0.7, 0, r.z[1] - 0.8]} />
     </group>
@@ -487,6 +455,7 @@ export default function HQ() {
           <Operations />
           <Partitions />
           <RoomZones />
+          <Agents />
         </Suspense>
         <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping minDistance={6} maxDistance={55} maxPolarAngle={1.25} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} />
         <CameraRig />

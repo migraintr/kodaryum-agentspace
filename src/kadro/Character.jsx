@@ -8,6 +8,10 @@ import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { aim, bakeRetarget, boneHeight, prefixOf, restMap } from './rig.js'
 
 export const MODELS = {
+  // Depodaki (sıkıştırılmış) çalışan modelleri
+  man: '/agents/man.glb',
+  woman: '/agents/woman.glb',
+  // Yerel deneme modelleri (public/models, depoda yok)
   m: '/models/readyplayer.me.glb',
   f: '/models/Michelle.glb',
   mpfb: '/models/mpfb.glb',
@@ -15,9 +19,36 @@ export const MODELS = {
   avatarsdk: '/models/avatarsdk.glb',
   brunette: '/models/brunette.glb',
 }
-const ANIMS = '/models/Xbot.glb'
-Object.values(MODELS).forEach((u) => useGLTF.preload(u))
+const ANIMS = '/agents/anims.glb'
+;[MODELS.man, MODELS.woman].forEach((u) => useGLTF.preload(u))
 useGLTF.preload(ANIMS)
+
+// Takım elbise boyası: yalnızca renkli kumaşı (ceket, yelek, pantolon) boyar; beyaz gömlek ve koyu
+// detaylar (kravat, düğme) korunur. Kumaş dokusu parlaklık üzerinden aynen kalır.
+function suit(mat, color, accent) {
+  const m = mat.clone()
+  m.userData.suit = new THREE.Color(color)
+  m.userData.accent = new THREE.Color(accent ?? color)
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uSuit = { value: m.userData.suit }
+    s.uniforms.uAccent = { value: m.userData.accent }
+    s.fragmentShader = s.fragmentShader.replace('void main() {', 'uniform vec3 uSuit;\nuniform vec3 uAccent;\nvoid main() {').replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+      vec3 c0 = diffuseColor.rgb;
+      float hi = max(c0.r, max(c0.g, c0.b));
+      float lo = min(c0.r, min(c0.g, c0.b));
+      float sat = (hi - lo) / (hi + 0.0001);
+      float lum = dot(c0, vec3(0.299, 0.587, 0.114));
+      float cloth = smoothstep(0.1, 0.22, sat);              // renkli kumaş → boya
+      float vest = smoothstep(0.04, 0.0, c0.g - c0.b) * cloth; // morumsu yelek → aksan rengi
+      vec3 dyed = mix(uSuit, uAccent, vest) * (0.35 + lum * 1.25);
+      diffuseColor.rgb = mix(c0, dyed, cloth);`,
+    )
+  }
+  m.customProgramCacheKey = () => `suit-${color}-${accent}`
+  return m
+}
 
 // Dokuyu gri tona çevirip verilen renkle boyar: kumaş dokusu korunur, renk değişir
 function dye(mat, color, strength = 1) {
@@ -57,8 +88,11 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       o.receiveShadow = true
       const name = o.material.name
       if (name === 'Wolf3D_Headwear' || (name === 'Wolf3D_Beard' && !look.beard)) o.visible = false
-      if (name === 'Wolf3D_Outfit_Top' && look.top) o.material = dye(o.material, look.top)
-      if (name === 'Wolf3D_Outfit_Bottom' && look.bottom) o.material = dye(o.material, look.bottom)
+      if (name === 'Wolf3D_Outfit_Top' && look.suit) o.material = suit(o.material, look.suit, look.vest)
+      else if (name === 'Wolf3D_Outfit_Top' && look.top) o.material = dye(o.material, look.top)
+      if (name === 'Wolf3D_Outfit_Bottom' && look.suit) o.material = suit(o.material, look.suit)
+      else if (name === 'Wolf3D_Outfit_Bottom' && look.bottom) o.material = dye(o.material, look.bottom)
+      if (/shoes/i.test(name) && look.shoes) o.material = dye(o.material, look.shoes, 0.9)
       if (name === 'Wolf3D_Outfit_Footwear' && look.shoes) o.material = dye(o.material, look.shoes, 0.8)
       if (name === 'Ch03_Body' && look.tint) {
         o.material = o.material.clone()
@@ -66,6 +100,43 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       }
       o.material.envMapIntensity = 0.9
     })
+    // Şapka gizlenince kısa kesim saç: kafa derisi bağlama pozundaki (bind pose) konuma göre boyanır —
+    // tepe, şakaklar ve ense saç rengini alır, alın ve yüz açık kalır; hafif doku gürültüsü saç telini andırır.
+    const head = model.getObjectByName('Wolf3D_Head')
+    if (look.hair && head && !head.userData.hair) {
+      head.geometry.computeBoundingBox()
+      const bb = head.geometry.boundingBox
+      const m = head.material.clone()
+      m.userData.hair = new THREE.Color(look.hair)
+      m.onBeforeCompile = (s) => {
+        s.uniforms.uHair = { value: m.userData.hair }
+        s.uniforms.uTop = { value: bb.max.y }
+        s.uniforms.uFront = { value: bb.max.z }
+        s.uniforms.uMidZ = { value: (bb.min.z + bb.max.z) / 2 }
+        s.vertexShader = s.vertexShader
+          .replace('void main() {', 'varying vec3 vBind;\nvoid main() {\n  vBind = position;')
+        s.fragmentShader = s.fragmentShader
+          .replace('void main() {', 'uniform vec3 uHair;\nuniform float uTop;\nuniform float uFront;\nuniform float uMidZ;\nvarying vec3 vBind;\nvoid main() {')
+          .replace(
+            '#include <map_fragment>',
+            `#include <map_fragment>
+            float d = uTop - vBind.y;                                   // tepeden aşağı (m)
+            float back = smoothstep(uMidZ + 0.03, uMidZ - 0.03, vBind.z); // başın arka yarısı
+            float ax = abs(vBind.x);
+            float line = 0.068 + 0.022 * smoothstep(0.02, 0.06, ax);      // alın ortası yüksek, şakaklara doğru iner
+            float hairline = smoothstep(line + 0.006, line - 0.006, d);
+            float nape = back * smoothstep(0.155, 0.14, d);                // ense
+            float temple = smoothstep(0.058, 0.066, ax) * smoothstep(0.11, 0.1, d) * smoothstep(uFront - 0.055, uFront - 0.075, vBind.z); // favoriler (kulak önü)
+            float mask = clamp(max(max(hairline, nape), temple), 0.0, 1.0);
+            float n = fract(sin(dot(floor(vBind.xz * 900.0), vec2(12.9898, 78.233))) * 43758.5453);
+            vec3 hc = uHair * (0.75 + 0.5 * n);
+            diffuseColor.rgb = mix(diffuseColor.rgb, hc, mask);`,
+          )
+      }
+      m.customProgramCacheKey = () => `hair-${look.hair}`
+      head.material = m
+      head.userData.hair = true
+    }
   }, [model]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const src = useMemo(() => clone(anim.scene), [anim.scene])

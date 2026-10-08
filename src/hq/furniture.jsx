@@ -273,7 +273,8 @@ export function ConferenceTable({ seats = 8, ...p }) {
         </mesh>
       ))}
       {Array.from({ length: per }, (_, i) => -1.2 + (i * 2.4) / (per - 1)).flatMap((z) =>
-        [-1, 1].map((s) => <Chair key={`${z}${s}`} position={[s * 0.85, 0, z]} rotation-y={(-s * Math.PI) / 2} />),
+        // Sandalye yerel −z yönüne bakar (sırtlık +z); masaya dönmesi için sağdakiler +90°, soldakiler −90°
+        [-1, 1].map((s) => <Chair key={`${z}${s}`} position={[s * 0.85, 0, z]} rotation-y={(s * Math.PI) / 2} />),
       )}
       <Chair position={[0, 0, 2.0]} rotation-y={0} />
       <Plant size={0.32} position={[0, 0.775, 0]} />
