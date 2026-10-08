@@ -87,6 +87,9 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
   const sp = prefixOf(srcRoot)
   const dp = prefixOf(dstRoot)
   const pairs = []
+  // Hedef karakter bir grubun içinde yön çevirmiş (rotation-y) olabilir; aktarım her zaman karakterin kendi
+  // uzayında yapılır (kaynak ile aynı çerçeve). Aksi halde bacak/gövde salınımı yönle birlikte yan yatar.
+  const rInv = dstRoot.getWorldQuaternion(new THREE.Quaternion()).invert()
   dstRoot.traverse((d) => {
     if (!d.isBone) return
     const s = srcRoot.getObjectByName(sp + baseName(d.name))
@@ -105,12 +108,13 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
     const a = b.getWorldPosition(new THREE.Vector3())
     return c.getWorldPosition(new THREE.Vector3()).sub(a).normalize()
   }
+  const dirIn = (b, inv) => dir(b)?.applyQuaternion(inv) ?? null
   for (const p of pairs) {
     srcRest.set(p.name, p.s.getWorldQuaternion(new THREE.Quaternion()))
     // Dinlenme pozları farklıysa (T / A): hedef kemiği kaynak kemiğin yönüne hizalayan dönüşle düzelt
-    const wd = p.d.getWorldQuaternion(new THREE.Quaternion())
+    const wd = p.d.getWorldQuaternion(new THREE.Quaternion()).premultiply(rInv)
     const ds = dir(p.s)
-    const dd = dir(p.d)
+    const dd = dirIn(p.d, rInv)
     if (ds && dd && /Shoulder|Arm|Hand$/.test(p.name)) wd.premultiply(new THREE.Quaternion().setFromUnitVectors(dd, ds))
     dstRest.set(p.name, wd)
     saveS.set(p.s, p.s.quaternion.clone())
@@ -145,7 +149,7 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
       p.s.getWorldQuaternion(ws)
       // D = Ws(t) · Ws_rest⁻¹  →  hedef dünya = D · Wd_rest
       tw.copy(ws).multiply(srcRest.get(p.name).clone().invert()).multiply(dstRest.get(p.name))
-      p.d.parent.getWorldQuaternion(pw)
+      p.d.parent.getWorldQuaternion(pw).premultiply(rInv)
       p.d.quaternion.copy(pw.invert().multiply(tw))
       p.d.updateMatrixWorld(true)
       p.values.push(...p.d.quaternion.toArray())
