@@ -164,6 +164,7 @@ export function* inspectorScript(st) {
     // 2) Odaları sırayla denetle
     for (const id of TOUR) {
       const R = ROUTES[id]
+      useStore.getState().tourEvent({ status: 'walking', room: null, next: id })
       yield* walk(st, [R.path[0]])
       yield* walk(st, R.path.slice(1))
       yield* turnTo(st, R.face)
@@ -171,6 +172,10 @@ export function* inspectorScript(st) {
       yield* hold(st, 2.4, 'inspect')
       const rep = roomReport(id)
       findings.push(rep)
+      // pano ve oda panellerindeki canlı tur kaydı
+      const note = `${repLine(rep)} — ${rep.note}`
+      const level = rep.lag && rep.lag.progress < 20 ? 'warn' : 'ok'
+      useStore.getState().tourEvent({ status: 'inspecting', room: id, note, level }, { at: Date.now(), room: id, note, level })
       st.say = `✓ ${repLine(rep)}`
       yield* hold(st, 2.8, 'inspect')
       st.say = null

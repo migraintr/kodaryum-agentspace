@@ -12,8 +12,8 @@ import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll, rollP
 
 export const MODELS = {
   // Depodaki (sıkıştırılmış) çalışan modelleri
-  man: '/agents/man.glb',
-  woman: '/agents/woman.glb',
+  man: new URL('../assets/agents/man.glb', import.meta.url).href, // src/assets: derlemede içerik özetli ad (1 yıl önbellek)
+  woman: new URL('../assets/agents/woman.glb', import.meta.url).href,
   // Yerel deneme modelleri (public/models, depoda yok)
   m: '/models/readyplayer.me.glb',
   f: '/models/Michelle.glb',
@@ -22,9 +22,9 @@ export const MODELS = {
   avatarsdk: '/models/avatarsdk.glb',
   brunette: '/models/brunette.glb',
 }
-const ANIMS = '/agents/anims.glb'
+const ANIMS = new URL('../assets/agents/anims.glb', import.meta.url).href
 // Uzak mesafe ağları (yalnızca geometri, ~%28 üçgen): aynı iskelete bağlı SkinnedMesh'lerin geometrisi değiştirilir
-const LODS = { man: '/agents/man-lod.glb', woman: '/agents/woman-lod.glb' }
+const LODS = { man: new URL('../assets/agents/man-lod.glb', import.meta.url).href, woman: new URL('../assets/agents/woman-lod.glb', import.meta.url).href }
 Object.values(LODS).forEach((u) => useGLTF.preload(u))
 // Aktarılmış klipler model türü + hareket başına bir kez üretilir (21 karakter aynı iskeleti paylaşır; her biri yeniden örneklemesin)
 const CLIP_CACHE = new Map()

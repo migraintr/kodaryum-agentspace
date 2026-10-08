@@ -17,6 +17,17 @@ export const HOME = { target: new THREE.Vector3(0, 0, -0.2), pos: new THREE.Vect
 export const LIMITS = { minDistance: 4, maxDistance: 60, minPolarAngle: 0.02, maxPolarAngle: 1.36 }
 const HOME_SPH = new THREE.Spherical().setFromVector3(HOME.pos.clone().sub(HOME.target))
 const ROOM_VIEW = { dist: 12.75, polar: 0.84 } // odaya odaklanınca
+// Dar (dikey) ekranlarda kat sığsın diye ana görünüm uzaklaşır; en-boy oranı değişince güncellenir
+const BASE_R = HOME_SPH.radius
+const MAX0 = LIMITS.maxDistance
+function fitHome(aspect) {
+  const k = Math.min(2.6, Math.max(1, 1.25 / aspect))
+  HOME_SPH.radius = BASE_R * k
+  HOME.pos.copy(HOME.target).add(new THREE.Vector3().setFromSpherical(HOME_SPH))
+  LIMITS.maxDistance = MAX0 * k
+  return k
+}
+fitHome(typeof innerWidth === 'number' ? innerWidth / Math.max(1, innerHeight) : 1.6)
 
 const TAU = Math.PI * 2
 const wrap = (a) => a - TAU * Math.round(a / TAU) // → [-π, π]
@@ -38,6 +49,9 @@ export function CameraRig() {
   const scene = useThree((s) => s.scene)
   const roomId = useStore((s) => s.roomId)
   const camReset = useStore((s) => s.camReset)
+  const size = useThree((s) => s.size)
+  const inset = useStore((s) => s.viewInset) // oda panellerinin kapladığı alan: oda kalan boş alana ortalanır
+  const off = useRef({ x: 0, y: 0 })
   const anim = useRef(null) // { now, to, rate } — now: o anki yön/eğim/uzaklık/hedef, to: varılacak
   const drag = useRef(null) // 'rotate' | 'pan' | 'dolly' | null
 
@@ -57,12 +71,18 @@ export function CameraRig() {
     if (!controls) return
     const r = ROOMS.find((x) => x.id === roomId)
     const b = base()
+    const aspect = size.width / Math.max(1, size.height)
+    fitHome(aspect)
+    controls.maxDistance = LIMITS.maxDistance
     if (r) {
       const [cx, cz] = C(r)
-      go({ target: new THREE.Vector3(cx, 0.6, cz), az: b.az, polar: ROOM_VIEW.polar, dist: ROOM_VIEW.dist, home: false })
-    } else go({ target: HOME.target.clone(), az: near(b.az, 0), polar: HOME_SPH.phi, dist: HOME_SPH.radius, home: true })
+      const fw = Math.max(120, size.width - inset.l - inset.r)
+      const fh = Math.max(120, size.height - inset.t - inset.b)
+      const kRoom = Math.min(2.6, Math.max(1, 0.95 / (fw / fh))) * (size.height / fh)
+      go({ target: new THREE.Vector3(cx, 0.6, cz), az: b.az, polar: ROOM_VIEW.polar, dist: ROOM_VIEW.dist * kRoom, home: false })
+    } else if (!useStore.getState().camMoved || camReset) go({ target: HOME.target.clone(), az: near(b.az, 0), polar: HOME_SPH.phi, dist: HOME_SPH.radius, home: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, camReset, controls])
+  }, [roomId, camReset, controls, size.width, size.height, inset])
 
   // ── Fare
   useEffect(() => {
@@ -143,6 +163,19 @@ export function CameraRig() {
   useFrame((_, dt) => {
     if (!controls) return
     const st = useStore.getState()
+    // Görüntü kaydırma: sahne merkezi, panellerin arasındaki boş alanın merkezine kayar (yumuşak geçiş)
+    const o = off.current
+    const tx = (inset.l - inset.r) / 2
+    const ty = (inset.t - inset.b) / 2
+    if (Math.abs(o.x - tx) > 0.25 || Math.abs(o.y - ty) > 0.25) {
+      const q = 1 - Math.exp(-dt * 5)
+      o.x += (tx - o.x) * q
+      o.y += (ty - o.y) * q
+      if (!tx && !ty && Math.abs(o.x) < 0.3 && Math.abs(o.y) < 0.3) {
+        o.x = o.y = 0
+        camera.clearViewOffset()
+      } else camera.setViewOffset(size.width, size.height, -o.x, -o.y, size.width, size.height)
+    }
     const a = anim.current
     if (a) {
       const k = 1 - Math.exp(-dt * a.rate)

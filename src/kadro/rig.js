@@ -87,6 +87,9 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
   const sp = prefixOf(srcRoot)
   const dp = prefixOf(dstRoot)
   const pairs = []
+  // Hedef karakter bir grubun içinde yön çevirmiş (rotation-y) olabilir; aktarım her zaman karakterin kendi
+  // uzayında yapılır (kaynak ile aynı çerçeve). Aksi halde bacak/gövde salınımı yönle birlikte yan yatar.
+  const rInv = dstRoot.getWorldQuaternion(new THREE.Quaternion()).invert()
   dstRoot.traverse((d) => {
     if (!d.isBone) return
     const s = srcRoot.getObjectByName(sp + baseName(d.name))
@@ -105,12 +108,13 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
     const a = b.getWorldPosition(new THREE.Vector3())
     return c.getWorldPosition(new THREE.Vector3()).sub(a).normalize()
   }
+  const dirIn = (b, inv) => dir(b)?.applyQuaternion(inv) ?? null
   for (const p of pairs) {
     srcRest.set(p.name, p.s.getWorldQuaternion(new THREE.Quaternion()))
     // Dinlenme pozları farklıysa (T / A): hedef kemiği kaynak kemiğin yönüne hizalayan dönüşle düzelt
-    const wd = p.d.getWorldQuaternion(new THREE.Quaternion())
+    const wd = p.d.getWorldQuaternion(new THREE.Quaternion()).premultiply(rInv)
     const ds = dir(p.s)
-    const dd = dir(p.d)
+    const dd = dirIn(p.d, rInv)
     if (ds && dd && /Shoulder|Arm|Hand$/.test(p.name)) wd.premultiply(new THREE.Quaternion().setFromUnitVectors(dd, ds))
     dstRest.set(p.name, wd)
     saveS.set(p.s, p.s.quaternion.clone())
@@ -128,6 +132,11 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
   const ratio = sHip && dHip ? legOf(dstRoot, dp, dHip0) / legOf(srcRoot, sp, sHip0) : 1
   const hipValues = []
   const hp = new THREE.Vector3()
+  // Zemin hızı ölçümü: yere basan ayağın (en alçak kısım) gövdeye göre geriye kayma hızı = karakterin
+  // bu animasyonla ilerlemesi gereken hız. Yürüyen karakter bununla eşlenirse ayaklar yerde kaymaz.
+  const feet = ['LeftFoot', 'RightFoot'].map((n) => dstRoot.getObjectByName(dp + n)).filter(Boolean)
+  const footTrack = feet.map(() => [])
+  const fp = new THREE.Vector3()
   const mixer = new THREE.AnimationMixer(srcRoot)
   const action = mixer.clipAction(clip).play()
   const n = Math.max(2, Math.round(clip.duration * fps) + 1)
@@ -145,11 +154,15 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
       p.s.getWorldQuaternion(ws)
       // D = Ws(t) · Ws_rest⁻¹  →  hedef dünya = D · Wd_rest
       tw.copy(ws).multiply(srcRest.get(p.name).clone().invert()).multiply(dstRest.get(p.name))
-      p.d.parent.getWorldQuaternion(pw)
+      p.d.parent.getWorldQuaternion(pw).premultiply(rInv)
       p.d.quaternion.copy(pw.invert().multiply(tw))
       p.d.updateMatrixWorld(true)
       p.values.push(...p.d.quaternion.toArray())
     }
+    feet.forEach((f, k) => {
+      f.getWorldPosition(fp).applyQuaternion(rInv)
+      footTrack[k].push([t, fp.y, fp.z])
+    })
     if (sHip && dHip) {
       const dy = sHip.getWorldPosition(hp).y - sHip0.y
       hp.copy(dHip0).setY(dHip0.y + dy * ratio)
@@ -165,7 +178,27 @@ export function bakeRetarget(clip, srcRoot, dstRoot, fps = 30) {
   dstRoot.updateMatrixWorld(true)
   const tracks = pairs.map((p) => new THREE.QuaternionKeyframeTrack(`${dp}${p.name}.quaternion`, times, p.values))
   if (hipValues.length) tracks.push(new THREE.VectorKeyframeTrack(`${dp}Hips.position`, times, hipValues))
-  return new THREE.AnimationClip(clip.name, clip.duration, tracks)
+  const out = new THREE.AnimationClip(clip.name, clip.duration, tracks)
+  out.userData = { groundSpeed: groundSpeed(footTrack) }
+  return out
+}
+
+/** Duruş (stance) karelerinde ayağın ileri-geri hızı (m/sn). Ayak hareket etmiyorsa 0. */
+function groundSpeed(tracks) {
+  let dist = 0
+  let time = 0
+  for (const tr of tracks) {
+    if (tr.length < 3) continue
+    const ys = tr.map((r) => r[1])
+    const lo = Math.min(...ys)
+    const cut = lo + (Math.max(...ys) - lo) * 0.18
+    for (let i = 1; i < tr.length; i++) {
+      if (tr[i][1] > cut || tr[i - 1][1] > cut) continue
+      dist += Math.abs(tr[i][2] - tr[i - 1][2])
+      time += tr[i][0] - tr[i - 1][0]
+    }
+  }
+  return time > 0 ? dist / time : 0
 }
 
 /** Kemiği, ilk çocuğuna doğru olan yönü karakter uzayında `target` yönüne bakacak şekilde çevirir (poz tanımı iskeletten bağımsız) */

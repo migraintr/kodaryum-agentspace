@@ -48,7 +48,7 @@ export default function AgentsView() {
       subtitle={`${PEOPLE.length - 1} yapay zekâ ajanı + CEO Kağan · ${DEPARTMENTS.filter((d) => d.board).length} departman`}
       actions={<SearchInput value={query} onChange={setQuery} placeholder="Ajan veya rol ara…" />}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-20 sm:p-5">
         <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {groups.map(({ dept, people }) => {
             const Icon = ICONS[dept.icon]
