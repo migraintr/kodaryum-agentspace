@@ -50,9 +50,9 @@ function DeptCard({ dept }) {
             setView('genel')
             focusRoom(dept.id)
           }}
-          className="cursor-pointer rounded-lg border border-fg/[0.12] px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 hover:bg-fg/[0.06]"
+          className="shrink-0 cursor-pointer rounded-lg border border-fg/[0.12] px-2.5 py-1.5 text-[11.5px] font-medium whitespace-nowrap text-ink-2 hover:bg-fg/[0.06]"
         >
-          Odada göster
+          <span className="sm:hidden">Göster</span><span className="hidden sm:inline">Odada göster</span>
         </button>
       </header>
 
@@ -99,7 +99,7 @@ export default function DepartmentsView() {
         </span>
       }
     >
-      <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-5 lg:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto p-3 pb-20 sm:p-5 lg:grid-cols-2 2xl:grid-cols-3">
         {DEPTS.map((d) => (
           <DeptCard key={d.id} dept={d} />
         ))}

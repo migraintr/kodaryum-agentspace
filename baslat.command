@@ -1,7 +1,7 @@
 #!/bin/bash
 # Kodaryum AgentSpace - tek tikla baslat (macOS: cift tikla, Linux: ./baslat.command)
 REPO=https://github.com/migraintr/kodaryum-agentspace.git
-BRANCH=claude/magical-meitner-08pyrq
+BRANCH=main
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DIR="$HERE/kodaryum-agentspace"
 [ -f "$HERE/package.json" ] && DIR="$HERE"

@@ -3,7 +3,7 @@ chcp 65001 >nul
 rem Kodaryum AgentSpace - tek tikla baslat (Windows). Cift tiklayin; klasor yoksa indirir, varsa gunceller.
 setlocal
 set REPO=https://github.com/migraintr/kodaryum-agentspace.git
-set BRANCH=claude/magical-meitner-08pyrq
+set BRANCH=main
 set DIR=%~dp0kodaryum-agentspace
 
 rem Bu dosya zaten proje klasorunun icindeyse onu kullan

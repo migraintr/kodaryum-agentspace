@@ -38,7 +38,7 @@ export function Loader() {
           key="loader"
           exit={{ opacity: 0, scale: 1.02, filter: 'blur(6px)' }}
           transition={{ duration: 0.7, ease: 'easeOut' }}
-          className="absolute inset-0 z-40 grid place-items-center overflow-hidden bg-[#eef1f6] dark:bg-[#0b1020]"
+          className="absolute inset-0 z-10 grid place-items-center overflow-hidden bg-[#eef1f6] dark:bg-[#0b1020]"
         >
           <div className="pointer-events-none absolute inset-0 [background:radial-gradient(60rem_30rem_at_50%_40%,rgba(59,130,246,.14),transparent_70%)]" />
           <div className="relative flex w-[min(440px,88vw)] flex-col items-center">

@@ -1,0 +1,51 @@
+# Firebase Hosting (ücretsiz Spark planı): main'e her gönderimde canlıya, her PR'da 7 günlük önizleme kanalına dağıtır.
+# Dağıtım yalnızca FIREBASE_SERVICE_ACCOUNT_KODARYUMAGENTSPACE gizli anahtarı tanımlıysa çalışır; yoksa iş akışı
+# yalnızca derlemeyi doğrular (CI). Kurulum: DEPLOY.md
+name: Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: hosting-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write # önizleme bağlantısını PR'a yorum olarak yazmak için
+  checks: write
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KODARYUMAGENTSPACE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      - name: Önizleme kanalına dağıt (PR)
+        if: github.event_name == 'pull_request' && env.HAS_SA == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KODARYUMAGENTSPACE }}
+          projectId: kodaryumagentspace
+          expires: 7d
+
+      - name: Canlıya dağıt (main)
+        if: github.event_name != 'pull_request' && env.HAS_SA == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KODARYUMAGENTSPACE }}
+          projectId: kodaryumagentspace
+          channelId: live

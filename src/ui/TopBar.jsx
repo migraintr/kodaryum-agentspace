@@ -1,5 +1,5 @@
 // Üst bar: menü · logo · Kağan'a hızlı erişim · çalışan sayacı · saat/tarih · gündüz/gece · profil
-import { CalendarDays, Menu, Moon, Sparkles, Sun, Users } from 'lucide-react'
+import { CalendarDays, ListChecks, Menu, Moon, Sparkles, Sun, Users } from 'lucide-react'
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { Avatar, Logo, useNow } from './kit.jsx'
@@ -65,7 +65,28 @@ function Staff() {
   )
 }
 
+// Dar ekranlarda yalnızca simge + sayı
+function StaffCompact() {
+  const setStaffOpen = useStore((s) => s.setStaffOpen)
+  return (
+    <button type="button" onClick={() => setStaffOpen(true)} aria-label={`${TOTAL} çalışan — ekibi görüntüle`} className={`${ICON_BTN} relative lg:hidden`}>
+      <Users size={18} />
+      <span className="absolute top-0.5 right-0 grid h-4 min-w-4 place-items-center rounded-full bg-emerald-500 px-1 text-[9.5px] font-bold text-white">{TOTAL}</span>
+    </button>
+  )
+}
+
 // Saat/tarih: tıklayınca Takvim ve Saat penceresi açılır (saniye noktası yanıp söner)
+// Proje takvimi ve ajanda (yapılanlar / yapılacaklar): saat penceresinin yanında
+function AgendaButton() {
+  const setCalOpen = useStore((s) => s.setCalOpen)
+  return (
+    <button type="button" onClick={() => setCalOpen(true)} aria-label="Proje ajandası" title="Proje ajandası: hangi gün neler yapıldı, neler yapılacak" className={`${ICON_BTN} hidden sm:grid`}>
+      <ListChecks size={18} />
+    </button>
+  )
+}
+
 function Clock() {
   const now = useNow(1000)
   const setClockOpen = useStore((s) => s.setClockOpen)
@@ -79,7 +100,7 @@ function Clock() {
       onClick={() => setClockOpen(true)}
       title="Takvim ve saat"
       aria-label={`Saat ${hh}:${mm}, ${date} — takvimi aç`}
-      className="group hidden h-10 cursor-pointer flex-col items-end justify-center rounded-xl px-2 leading-none transition-colors hover:bg-slate-900/[0.04] sm:flex dark:hover:bg-white/[0.06]"
+      className="group flex h-10 shrink-0 cursor-pointer flex-col items-end justify-center rounded-xl px-2 leading-none transition-colors hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.06]"
     >
       <span className="font-mono text-[15px] font-bold text-[#13234d] tabular-nums dark:text-white">
         {hh}
@@ -150,7 +171,7 @@ function Account() {
 export function TopBar() {
   const toggleNav = useStore((s) => s.toggleNav)
   return (
-    <header className="relative z-30 flex h-[60px] shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur-xl sm:gap-4 sm:px-4 dark:border-white/[0.06] dark:bg-[#0b111d]/90">
+    <header className="topbar relative z-30 flex h-[60px] shrink-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur-xl sm:gap-4 sm:px-4 dark:border-white/[0.06] dark:bg-[#0b111d]/90">
       <button type="button" onClick={toggleNav} aria-label="Menüyü aç" title="Menü" className={ICON_BTN}>
         <Menu size={19} />
       </button>
@@ -158,7 +179,9 @@ export function TopBar() {
       <AskAda />
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 md:ml-0">
         <Staff />
+        <StaffCompact />
         <Clock />
+        <AgendaButton />
         <span className="hidden h-6 w-px bg-slate-200 sm:block dark:bg-white/10" />
         <LightSwitch />
         <Account />

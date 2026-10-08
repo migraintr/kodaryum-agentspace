@@ -10,3 +10,5 @@ Sıkıştırılmış (meshopt + webp) karakter ve animasyon dosyaları.
 
 Ürün yayına çıkmadan önce bu modeller kendi ürettiğiniz / lisansı net avatarlarla değiştirilmelidir.
 Dosya adları aynı kalırsa kod değişmeden çalışır.
+
+Optimizasyon (woman.glb, anims.glb): kullanılmayan yüz morph hedefleri kaldırıldı, dokular en çok 1024 px webp, geometri meshopt ile sıkıştırıldı; anims.glb'den doku çıkarıldı (yalnızca iskelet + animasyon gerekli). man.glb'ye dokunulmadı: kısa saç gölgelendiricisi baş geometrisinin metre cinsinden konumlarını kullanıyor.

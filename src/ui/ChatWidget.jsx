@@ -481,7 +481,8 @@ function ChatWindow() {
     }
   }
   const lastCeoAt = messages.findLast((m) => m.from === 'CEO')?.at ?? ''
-  const quick = QUICK[project] ?? QUICK.all
+  const followups = messages.findLast((m) => m.from === 'CEO')?.followups // Gemini'nin son yanıtındaki takip önerileri
+  const quick = followups?.length ? followups : (QUICK[project] ?? QUICK.all)
 
   return (
     <motion.section
@@ -706,7 +707,7 @@ function Launcher() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6 }}
             onClick={openChat}
-            className="fixed right-4 bottom-[86px] z-40 w-[280px] cursor-pointer rounded-2xl rounded-br-md border border-fg/[0.1] bg-panel p-3 text-left shadow-xl"
+            className="fixed right-3 bottom-[76px] z-40 w-[min(280px,calc(100vw-24px))] sm:right-4 sm:bottom-[86px] cursor-pointer rounded-2xl rounded-br-md border border-fg/[0.1] bg-panel p-3 text-left shadow-xl"
           >
             <span className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
               {peek.from === 'CEO' ? 'Kağan · CEO' : peek.agent} {peek.project && <ProjectChip id={peek.project} />}
@@ -725,7 +726,7 @@ function Launcher() {
         onClick={openChat}
         aria-label="Kağan ile sohbeti aç (Ctrl+K)"
         title="Kağan ile sohbet · Ctrl+K"
-        className="fixed right-4 bottom-4 z-40 flex h-[60px] w-[60px] cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-[#2f80ed] to-[#7c3aed] shadow-[0_14px_30px_-8px_rgba(79,70,229,.75)]"
+        className="fixed right-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex h-[52px] w-[52px] cursor-pointer sm:right-4 sm:bottom-4 sm:h-[60px] sm:w-[60px] items-center justify-center rounded-full bg-gradient-to-br from-[#2f80ed] to-[#7c3aed] shadow-[0_14px_30px_-8px_rgba(79,70,229,.75)]"
       >
         <Logo size={34} />
         <span className="absolute right-1 bottom-1 h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white" />
