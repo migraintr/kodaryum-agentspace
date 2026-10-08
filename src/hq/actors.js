@@ -7,7 +7,8 @@
 // CEO ofisindeki koltuğa oturur → Kağan Bey masasından kalkıp karşı koltuğa geçer → istişare (karşılıklı
 // konuşma balonları) → rapor ve karar sohbete düşer → herkes yerine döner. Döngü sürekli tekrarlanır.
 import { DEPT_BY_ID, PEOPLE, PERSON_BY_ID, PROJECTS } from '../data.js'
-import { dat, useStore } from '../store.js'
+import { aiAvailable, aiWrite, buildContext } from '../ai.js'
+import { dat, projectStats, useStore } from '../store.js'
 import { C, CEO_SEAT, CHAIR_GAP, CORRIDOR_Z as CZ, DESKS, ROOM_BY_ID } from './plan.js'
 
 export const INSPECTOR = 'tolga'
@@ -141,6 +142,14 @@ export function roomReport(id) {
 }
 const repLine = (r) => `${r.people}/${r.people} masada · ${r.active} görev${r.avg != null ? ` · %${r.avg}` : ''}`
 
+// Gemini'nin istişare çıktısı: yalnızca biçimi doğruysa kullanılır, aksi hâlde eski sabit diyalog
+const clipText = (v, n) => String(v ?? '').trim().slice(0, n)
+function validMeeting(d) {
+  const lines = (d?.lines ?? []).filter((l) => (l?.who === 'ins' || l?.who === 'ceo') && clipText(l.text, 120)).slice(0, 8).map((l) => [l.who, clipText(l.text, 120)])
+  if (lines.length < 4) return null
+  return { lines, report: clipText(d.report, 900), summary: clipText(d.summary, 600) }
+}
+
 export function* inspectorScript(st) {
   const ins = PERSON_BY_ID.get(INSPECTOR)
   yield* hold(st, 6, 'type')
@@ -167,6 +176,29 @@ export function* inspectorScript(st) {
       st.say = null
       yield* walk(st, R.path.slice(0, -1).reverse())
     }
+    // Rapor ve karar verisi (yürürken hazır): Gemini istişareyi yazarken denetçi CEO ofisine yürür
+    const busiest = [...findings].sort((a, b) => b.active - a.active)[0]
+    const lag = findings.map((r) => r.lag).filter(Boolean).sort((a, b) => a.progress - b.progress)[0]
+    const risk = PROJECTS[0].risks.find((r) => r.level === 'yuksek') ?? PROJECTS[0].risks[0]
+    const lagOwner = lag && PERSON_BY_ID.get(lag.owner)
+    const helper = lag && PEOPLE.find((p) => p.dept === lagOwner.dept && p.id !== lag.owner && !lag.helpers.includes(p.id))
+    let ai // undefined = bekleniyor · null = yok/geçersiz · nesne = hazır
+    if (!aiAvailable()) ai = null
+    else {
+      const gs = useStore.getState()
+      aiWrite({
+        kind: 'meeting',
+        findings: findings.map((r) => ({ room: r.name, people: r.people, activeTasks: r.active, avgProgress: r.avg, note: r.note, lagging: r.lag ? { no: r.lag.no, title: r.lag.title, progress: Math.round(r.lag.progress) } : null })),
+        busiest: { room: busiest.name, activeTasks: busiest.active },
+        lag: lag ? { no: lag.no, title: lag.title, progress: Math.round(lag.progress), owner: lagOwner.name } : null,
+        risk: { text: risk.text, level: risk.level, owner: PERSON_BY_ID.get(risk.owner).name },
+        decision: lag ? `#${lag.no} “${lag.title}” işine ${helper ? helper.name : 'ekipten biri'} destek verilecek; ${busiest.name} ekibinin yükü izlenecek; kritik risk sahibi ${PERSON_BY_ID.get(risk.owner).name} bugün öncelik alacak.` : `${busiest.name} ekibinin yükü izlenecek; kritik risk sahibi ${PERSON_BY_ID.get(risk.owner).name} bugün öncelik alacak.`,
+        context: buildContext(gs, projectStats),
+      })
+        .then((r) => (ai = validMeeting(r.data)))
+        .catch(() => (ai = null))
+    }
+
     // 3) CEO ofisi: koltuğa otur, Kağan Bey'i bekle
     yield* walk(st, CEO_IN)
     yield* sitDown(st, SEATS.guest, 'chat')
@@ -174,17 +206,18 @@ export function* inspectorScript(st) {
     yield* say(st, 'Kağan Bey, kat turunu tamamladım.', 2.4, 'chat')
     yield* until(st, () => MEET.phase === 'seated', 'chat')
 
-    // 4) Rapor sohbete, ardından istişare
-    const busiest = [...findings].sort((a, b) => b.active - a.active)[0]
-    const lag = findings.map((r) => r.lag).filter(Boolean).sort((a, b) => a.progress - b.progress)[0]
-    const risk = PROJECTS[0].risks.find((r) => r.level === 'yuksek') ?? PROJECTS[0].risks[0]
+    // 4) Rapor sohbete, ardından istişare (Gemini yanıtı en fazla 6 sn beklenir; gelmezse sabit diyalog)
+    st.action = 'chat'
+    for (let w = 0; ai === undefined && w < 6; ) w += yield
+    if (ai === undefined) ai = null
     useStore.getState().post(
       'RELAY',
-      `Kat denetimi tamamlandı (${findings.length} oda):\n${findings.map((r) => `• ${r.name}: ${repLine(r)} — ${r.note}`).join('\n')}\nEn yoğun ekip: ${busiest.name}. Kağan Bey’le istişaredeyim.`,
+      ai?.report
+        ? `Kat denetimi tamamlandı (${findings.length} oda):\n${ai.report}`
+        : `Kat denetimi tamamlandı (${findings.length} oda):\n${findings.map((r) => `• ${r.name}: ${repLine(r)} — ${r.note}`).join('\n')}\nEn yoğun ekip: ${busiest.name}. Kağan Bey’le istişaredeyim.`,
       { boardId: 'operasyon', agent: ins.name.toLocaleUpperCase('tr-TR') },
     )
-    const lagOwner = lag && PERSON_BY_ID.get(lag.owner)
-    const lines = [
+    const lines = ai?.lines ?? [
       ['ins', 'Raporu sohbete ilettim. Bütün odalar düzenli.'],
       ['ceo', `Teşekkürler ${ins.name}. Nerede sıkışma var?`],
       ['ins', `${busiest.name} çok yoğun: ${busiest.active} aktif görev.`],
@@ -206,7 +239,6 @@ export function* inspectorScript(st) {
     }
     // Karar: geride kalan işe aynı ekipten destek ata
     if (lag) {
-      const helper = PEOPLE.find((p) => p.dept === lagOwner.dept && p.id !== lag.owner && !lag.helpers.includes(p.id))
       useStore.setState((s) => ({
         tasks: s.tasks.map((t) => (t.no === lag.no ? { ...t, helpers: helper ? [...t.helpers, helper.id] : t.helpers, progress: Math.min(99, t.progress + 4) } : t)),
       }))
@@ -214,7 +246,9 @@ export function* inspectorScript(st) {
         .getState()
         .post(
           'CEO',
-          `${ins.name}’la denetim istişaresi tamamlandı.\n• ${busiest.name} ekibinin yükünü yakından izliyorum.\n• #${lag.no} “${lag.title}” için ${helper ? `${dat(helper.name)}` : 'ekibe'} destek görevi verdim.\n• Kritik risk: ${risk.text} — sorumlu ${PERSON_BY_ID.get(risk.owner).name}.\nSonraki kat turu birkaç dakika içinde.`,
+          ai?.summary
+            ? `${ins.name}’la denetim istişaresi tamamlandı.\n${ai.summary}`
+            : `${ins.name}’la denetim istişaresi tamamlandı.\n• ${busiest.name} ekibinin yükünü yakından izliyorum.\n• #${lag.no} “${lag.title}” için ${helper ? `${dat(helper.name)}` : 'ekibe'} destek görevi verdim.\n• Kritik risk: ${risk.text} — sorumlu ${PERSON_BY_ID.get(risk.owner).name}.\nSonraki kat turu birkaç dakika içinde.`,
           { delegations: [DEPT_BY_ID.get(lagOwner.dept).board, 'operasyon'].filter(Boolean), project: lag.project },
         )
     }

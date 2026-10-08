@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import {
   AGENTS, BOARDS, BOARD_BY_ID, CEO, CHAT_HISTORY, DEPT_BY_ID, PEOPLE, PERSON_BY_ID, PROJECTS, PROJECT_BY_ID, TASKS, USERS, USER_BY_ID,
 } from './data.js'
+import { aiAvailable, aiChat, aiWrite, buildContext } from './ai.js'
 
 export const HEALTH = {
   STABIL: { label: 'Stabil', color: '#34d399' },
@@ -180,6 +181,101 @@ export function dat(name) {
 function ceoSay(text, project, delegations = []) {
   useStore.setState((s) => ({ messages: [...s.messages, message('CEO', text, { project, delegations })], unread: s.chatOpen ? 0 : s.unread + 1 }))
 }
+
+// ─── Gemini entegrasyonu ─────────────────────────────────────────────────────
+// Her yerde aynı kural: önce Gemini (sunucu /api/ai/*), olmazsa/hata verirse eski yerel kural tabanlı metin.
+const clip = (v, n) => String(v ?? '').trim().slice(0, n)
+const ctxOf = (s) => buildContext(s, projectStats)
+const VIEW_OF = { projeler: 'projeler', gorevler: 'gorevler', departmanlar: 'departmanlar', ajanlar: 'ajanlar' }
+
+/** Ajanın sohbete düştüğü kısa iş güncellemesi (event: 'start' | 'done'); fallback: yerel metin */
+async function agentLine(event, t, fallback) {
+  if (!aiAvailable()) return fallback
+  try {
+    const s = useStore.getState()
+    const p = PERSON_BY_ID.get(t.owner)
+    const pr = PROJECT_BY_ID.get(t.project)
+    const { data } = await aiWrite({
+      kind: 'agent',
+      event,
+      agent: { name: p.name, surname: p.surname, role: p.role, dept: DEPT_BY_ID.get(p.dept).name },
+      task: { no: t.no, title: t.title, progress: Math.round(t.progress), phase: pr?.phases[t.phase] },
+      project: pr ? { id: pr.id, name: pr.name } : null,
+      teamNote: t.helpers.map((h) => PERSON_BY_ID.get(h)?.name).filter(Boolean).join(', ') || null,
+      context: ctxOf(s),
+    })
+    const text = clip(data?.text, 320)
+    return text.length > 8 ? text : fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** Gemini'nin sohbet yanıtını (niyet, plan, eylemler) uygulamaya işler; geçersizse false döner */
+function applyAiChat(d, userText, guessed) {
+  const reply = clip(d?.reply, 900)
+  if (!reply) return false
+  const st = useStore.getState()
+  const project = d.project && d.project !== 'none' && PROJECT_BY_ID.has(d.project) ? d.project : guessed
+  const speaker = d.speaker && d.speaker !== 'ada' ? PERSON_BY_ID.get(d.speaker) : null
+  let delegations = (d.departments ?? []).map((id) => DEPT_BY_ID.get(id)?.board).filter(Boolean)
+  const extra = { project, delegations: [...new Set(delegations)], followups: (d.followups ?? []).map((f) => clip(f, 48)).filter(Boolean).slice(0, 3) }
+
+  // Plan: yalnızca geçerli ajanlara; her görev onay bekler
+  if (d.intent === 'plan' && Array.isArray(d.plan) && d.plan.length) {
+    let no = st.nextTaskNo
+    const phase0 = projectStats(st.tasks, project).phase
+    const maxPhase = PROJECT_BY_ID.get(project).phases.length - 1
+    const pending = d.plan.slice(0, 6).flatMap((g) => {
+      const owner = PERSON_BY_ID.get(g.owner)
+      if (!owner || owner.id === CEO.id || !clip(g.title, 80)) return []
+      const helpers = [...new Set((g.helpers ?? []).filter((h) => PERSON_BY_ID.has(h) && h !== owner.id && h !== CEO.id))].slice(0, 3)
+      const phase = Number.isInteger(g.phase) ? clamp(g.phase, 0, maxPhase) : phase0
+      return [{ no: no++, project, phase, title: clip(g.title, 70), owner: owner.id, helpers, progress: 0, status: 'pending', at: Date.now() }]
+    })
+    if (pending.length) {
+      extra.delegations = [...new Set([...extra.delegations, ...pending.map((t) => DEPT_BY_ID.get(PERSON_BY_ID.get(t.owner).dept).board).filter(Boolean)])]
+      useStore.setState((s) => ({
+        tasks: [...s.tasks.filter((t) => t.status !== 'pending'), ...pending],
+        nextTaskNo: no,
+        priority: PRIORITY[d.priority] && d.priority !== 'normal' ? d.priority : s.priority,
+        adaSays: 'Plan hazır!\nOnayınızı bekliyorum.',
+      }))
+    }
+  } else if (d.intent === 'report') {
+    extra.kind = 'report'
+    useStore.setState({ adaSays: `${PROJECTS.length} proje yürüyor,\nrapor hazır.` })
+  } else if (d.intent === 'clarify') {
+    useStore.setState({ adaSays: 'Biraz daha\naçar mısınız?' })
+  }
+
+  // Kağan ya da doğrudan seslenilen ajan yanıtlar
+  useStore.setState((s) => ({
+    messages: [
+      ...s.messages,
+      speaker
+        ? message('RELAY', reply, { ...extra, boardId: DEPT_BY_ID.get(speaker.dept).board, agent: speaker.name.toLocaleUpperCase('tr-TR') })
+        : message('CEO', reply, extra),
+    ],
+    typing: false,
+    unread: s.chatOpen ? 0 : s.unread + 1,
+  }))
+
+  // Arayüz eylemleri (yalnızca bilinen hedefler)
+  for (const a of (d.actions ?? []).slice(0, 3)) {
+    const g = useStore.getState()
+    if (a.type === 'focusRoom' && DEPT_BY_ID.has(a.target)) {
+      g.setView('genel')
+      if (g.roomId !== a.target) g.focusRoom(a.target)
+    } else if (a.type === 'openView' && VIEW_OF[a.target]) g.setView(VIEW_OF[a.target])
+    else if (a.type === 'openStaff') g.setStaffOpen(true)
+    else if (a.type === 'openCalendar') g.setClockOpen(true)
+    else if (a.type === 'approvePlan') g.approve()
+    else if (a.type === 'setPriority' && PRIORITY[a.target]) g.setPriority(a.target)
+    else if (a.type === 'overview') g.resetView()
+  }
+  return true
+}
 function DEPARTMENTS_LOAD(tasks) {
   const act = tasks.filter((t) => t.status === 'active')
   return [...new Set(AGENTS.map((a) => a.dept))].map((d) => ({
@@ -295,7 +391,7 @@ export const useStore = create((set, get) => ({
     const project = cmd ? null : guessProject(text, get().chatProject)
     set((s) => ({ messages: [...s.messages, message('HUMAN', text, { by: s.userId, project })], typing: true }))
 
-    later(() => {
+    const local = () => {
       const s = get()
       const q = fold(text)
       const targets = cmd ? [] : route(text)
@@ -349,7 +445,23 @@ export const useStore = create((set, get) => ({
         typing: false,
         unread: st.chatOpen ? 0 : st.unread + 1,
       }))
-    }, 900 + Math.random() * 700)
+    }
+    // Önce Gemini; sunucu yapılandırılmamışsa, kota/hız sınırı ya da hata olursa yerel kural tabanlı yanıt
+    const viaLocal = () => later(local, 700 + Math.random() * 500)
+    if (!aiAvailable()) viaLocal()
+    else {
+      const s0 = get()
+      const history = s0.messages.slice(-17, -1).filter((m) => m.from !== 'SYSTEM').map((m) => ({
+        who: m.from === 'HUMAN' ? USER_BY_ID.get(m.by)?.name ?? 'Kurucu' : m.from === 'CEO' ? 'Kağan' : m.agent ?? 'Ajan',
+        text: m.text,
+        time: new Date(m.at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      }))
+      aiChat({ context: ctxOf(s0), history, user: USER_BY_ID.get(s0.userId)?.name, tab: s0.chatProject, text })
+        .then((r) => {
+          if (!applyAiChat(r.data, text, project ?? guessProject(text, get().chatProject))) viaLocal()
+        })
+        .catch(() => viaLocal())
+    }
     return true
   },
 
@@ -369,10 +481,11 @@ export const useStore = create((set, get) => ({
     get().notify(`${pending.length} görev başlatıldı`, 'ok')
     later(() => set((s) => ({ flights: s.flights.filter((f) => !flights.includes(f)) })), 2600 + pending.length * 450)
     pending.forEach((t, i) =>
-      later(() => {
+      later(async () => {
         const p = PERSON_BY_ID.get(t.owner)
+        const text = await agentLine('start', t, `Görev #${t.no} alındı, başlıyorum: ${t.title}`)
         set((s) => ({
-          messages: [...s.messages, message('RELAY', `Görev #${t.no} alındı, başlıyorum: ${t.title}`, { boardId: DEPT_BY_ID.get(p.dept).board, agent: p.name.toLocaleUpperCase('tr-TR'), project: t.project })],
+          messages: [...s.messages, message('RELAY', text, { boardId: DEPT_BY_ID.get(p.dept).board, agent: p.name.toLocaleUpperCase('tr-TR'), project: t.project })],
           unread: s.chatOpen ? 0 : s.unread + 1,
         }))
       }, 1600 + i * 700),
@@ -411,10 +524,14 @@ export const useStore = create((set, get) => ({
     finished.forEach((t) => {
       const p = PERSON_BY_ID.get(t.owner)
       const pr = PROJECT_BY_ID.get(t.project)
-      set((s) => ({
-        messages: [...s.messages, message('RELAY', `Görev #${t.no} tamamlandı: ${t.title} ✓`, { boardId: DEPT_BY_ID.get(p.dept).board, agent: p.name.toLocaleUpperCase('tr-TR'), project: t.project })],
-        unread: s.chatOpen ? 0 : s.unread + 1,
-      }))
+      const fallback = `Görev #${t.no} tamamlandı: ${t.title} ✓`
+      const post = (text) =>
+        set((s) => ({
+          messages: [...s.messages, message('RELAY', text, { boardId: DEPT_BY_ID.get(p.dept).board, agent: p.name.toLocaleUpperCase('tr-TR'), project: t.project })],
+          unread: s.chatOpen ? 0 : s.unread + 1,
+        }))
+      if (aiAvailable()) agentLine('done', { ...t, progress: 100 }, fallback).then(post)
+      else post(fallback)
       get().notify(`${p.name}: “${t.title}” tamamlandı`, 'ok')
       set({ adaSays: `Görev #${t.no}\ntamamlandı ✓` })
       if (!pr) return
@@ -446,7 +563,14 @@ export const useStore = create((set, get) => ({
         ms ? `Sıradaki kilometre taşı: ${ms.title} (${new Date(ms.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}).` : null,
         lag ? `En geride kalan iş #${lag.no} “${lag.title}” (%${Math.round(lag.progress)}) — ${dat(PERSON_BY_ID.get(lag.owner).name)} destek yönlendiriyorum.` : null,
       ].filter(Boolean)
-      ceoSay(lines.join('\n'), pr.id)
+      const local = lines.join('\n')
+      if (!aiAvailable()) ceoSay(local, pr.id)
+      else {
+        const previous = [...st.messages].reverse().find((m) => m.from === 'CEO' && m.project === pr.id && m.kind !== 'report')?.text ?? null
+        aiWrite({ kind: 'brief', project: { id: pr.id, name: pr.name, progress: ps.progress, phase: pr.phases[ps.phase], daysLeft: ps.days, nextMilestone: ms ?? null, laggingTask: lag ? { no: lag.no, title: lag.title, progress: Math.round(lag.progress), owner: PERSON_BY_ID.get(lag.owner).name } : null }, previous, context: ctxOf(st) })
+          .then((r) => ceoSay(clip(r.data?.text, 600) || local, pr.id))
+          .catch(() => ceoSay(local, pr.id))
+      }
     }
   },
 

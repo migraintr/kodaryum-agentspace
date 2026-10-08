@@ -481,7 +481,8 @@ function ChatWindow() {
     }
   }
   const lastCeoAt = messages.findLast((m) => m.from === 'CEO')?.at ?? ''
-  const quick = QUICK[project] ?? QUICK.all
+  const followups = messages.findLast((m) => m.from === 'CEO')?.followups // Gemini'nin son yanıtındaki takip önerileri
+  const quick = followups?.length ? followups : (QUICK[project] ?? QUICK.all)
 
   return (
     <motion.section
