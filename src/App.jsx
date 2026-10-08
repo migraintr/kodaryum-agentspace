@@ -2,6 +2,7 @@
 // Üst bar · tam ekran ofis (canlı 3B maket) · soldan açılan menü
 // (ekranlar: görevler, departmanlar, projeler…) · sağ altta Kağan ile sohbet balonu
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { deferred, whenIdle } from './deferred.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CircleCheck, Info, Maximize2, MousePointer2, Move, RotateCw, ScanSearch, TriangleAlert, ZoomIn } from 'lucide-react'
 import { useStore } from './store.js'
@@ -10,17 +11,51 @@ import { NAV } from './ui/nav.js'
 import { Sidebar } from './ui/Sidebar.jsx'
 import { TopBar } from './ui/TopBar.jsx'
 import { Loader } from './ui/Loader.jsx'
-import { StaffModal } from './ui/StaffModal.jsx'
-import { ClockModal } from './ui/ClockModal.jsx'
 
 // three.js + 3B sahne ayrı parça: yalnızca 3B görünüm seçilince yüklenir
 const Scene3D = lazy(() => import('./hq/HQ.jsx'))
 // Menü ekranları (Projeler, AI Çalışanlar…) ilk açıldıklarında yüklenir
-const ViewHost = lazy(() => import('./views/index.jsx'))
+// Menü ekranları ve pencereler ilk açılışta (ya da sahne hazır olduktan sonra boşta) yüklenir: ilk paket küçük kalır
+const VIEWS = deferred(() => import('./views/index.jsx'))
+const STAFF = deferred(() => import('./ui/StaffModal.jsx'))
+const CLOCK = deferred(() => import('./ui/ClockModal.jsx'))
+const CALENDAR = deferred(() => import('./ui/CalendarModal.jsx'))
+const ROOM = deferred(() => import('./ui/dept/RoomPanels.jsx'))
+const DASH = deferred(() => import('./ui/dept/DeptDashboard.jsx'))
+
+// Oda panelleri: ilk oda seçiminde yüklenir, sonra bağlı kalır (kapanış animasyonu)
+function RoomSlot() {
+  const want = useStore((s) => !!s.roomId)
+  const seen = useRef(false)
+  if (want) seen.current = true
+  const mod = ROOM.useModule(seen.current)
+  if (!mod) return null
+  const Panels = mod.default
+  return <Panels />
+}
+
+function ViewSlot() {
+  const view = useStore((s) => s.view)
+  const mod = VIEWS.useModule(view !== 'genel')
+  if (view === 'genel' || !mod) return null
+  const ViewHost = mod.default
+  return <ViewHost view={view} label={NAV.find((n) => n.view === view)?.label} />
+}
+
+// Pencere bir kez açılınca bileşen bağlı kalır (kapanış animasyonu çalışsın)
+function OnceOpen({ flag, mod: m, name }) {
+  const open = useStore((s) => s[flag])
+  const seen = useRef(false)
+  if (open) seen.current = true
+  const mod = m.useModule(seen.current)
+  if (!mod) return null
+  const C = mod[name]
+  return <C />
+}
 
 // Kamera ilk görünümden ayrılınca (odaya odaklanma, çevirme, yakınlaştırma) sağ üstte "Genel görünüm"
 function OfficeControls() {
-  const show = useStore((s) => (!!s.roomId || s.camMoved) && s.view === 'genel')
+  const show = useStore((s) => !s.roomId && s.camMoved && s.view === 'genel') // oda seçiliyken paneldeki "Genel" düğmesi var
   const resetView = useStore((s) => s.resetView)
   return (
     <div className="pointer-events-none absolute top-3 right-3 z-20">
@@ -115,11 +150,16 @@ function Toast() {
 
 export default function App() {
   const stageRef = useRef(null)
-  const view = useStore((s) => s.view)
 
   useEffect(() => {
     const { start, stop } = useStore.getState()
     start()
+    // Sahne hazır olunca, boşta: menü ekranlarını ve pencereleri önceden yükle (ilk açılış anlık olsun)
+    const unsub = useStore.subscribe((st) => {
+      if (!st.sceneReady) return
+      unsub()
+      whenIdle(() => [VIEWS, STAFF, CLOCK, CALENDAR, ROOM, DASH].forEach((m) => m.get()))
+    })
     // ESC: sırasıyla sohbeti, menüyü, menü ekranını, en son oda seçimini kapatır. Ctrl+K: Kağan ile sohbeti aç.
     const onKey = (e) => {
       const s = useStore.getState()
@@ -129,7 +169,7 @@ export default function App() {
         return
       }
       if (e.key !== 'Escape') return
-      if (s.staffOpen || s.clockOpen) return // pencereler kendi Esc'ini yönetir
+      if (s.staffOpen || s.clockOpen || s.calOpen || s.deptFull) return // pencereler kendi Esc'ini yönetir
       if (s.chatOpen) s.closeChat()
       else if (s.navOpen) s.closeNav()
       else if (s.view !== 'genel') s.setView('genel')
@@ -137,6 +177,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => {
+      unsub()
       stop()
       window.removeEventListener('keydown', onKey)
     }
@@ -157,20 +198,19 @@ export default function App() {
         </div>
         <OfficeControls />
         <MouseHint />
+        <RoomSlot />
         <Toast />
 
         {/* Soldaki menüden açılan ekran ofisin üstünde süzülür */}
-        {view !== 'genel' && (
-          <Suspense fallback={null}>
-            <ViewHost view={view} label={NAV.find((n) => n.view === view)?.label} />
-          </Suspense>
-        )}
+        <ViewSlot />
       </main>
 
       <Sidebar />
       <ChatWidget />
-      <StaffModal />
-      <ClockModal />
+      <OnceOpen flag="staffOpen" mod={STAFF} name="StaffModal" />
+      <OnceOpen flag="clockOpen" mod={CLOCK} name="ClockModal" />
+      <OnceOpen flag="calOpen" mod={CALENDAR} name="CalendarModal" />
+      <OnceOpen flag="deptFull" mod={DASH} name="default" />
     </div>
   )
 }

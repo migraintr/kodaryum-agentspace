@@ -57,6 +57,8 @@ html,
 body,
 #root {
   height: 100%;
+  height: 100dvh; /* mobil tarayıcı adres çubuğu: görünür alana göre */
+  overscroll-behavior: none; /* çekip yenileme / kenar sekmesi 3B sahneyi bozmasın */
   margin: 0;
   overflow: hidden;
   background: var(--void);
@@ -126,4 +128,62 @@ body,
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar) transparent;
+}
+
+/* ── Mobil ─────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* çift dokunma yakınlaştırması ve 300ms gecikme yok */
+}
+canvas {
+  touch-action: none; /* sahne kaydırma/yakınlaştırmayı OrbitControls yönetir */
+}
+/* iOS: 16px'ten küçük alanlara odaklanınca sayfa kendiliğinden yakınlaşır */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+/* çentikli / yuvarlak köşeli ekranlar: kenarlarda güvenli alan */
+@supports (padding: max(0px)) {
+  header.topbar {
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    height: calc(60px + env(safe-area-inset-top));
+  }
+}
+@media (hover: none) {
+  /* dokunmatik: yapışkan :hover görünümü bırakma */
+  .group-hover\:opacity-100 { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Izgara öğeleri içeriklerinden geniş olamaz: uzun metin/rozet dar ekranda kartı taşırmaz */
+:where(.grid) > * {
+  min-width: 0;
+}
+
+/* ── Grafik renkleri (dataviz): kategorik 8 renk sabit sırada, durum renkleri ayrı; koyu temada aynı tonların
+   koyu zemine göre adımları. Doğrulandı: açık zemin #ffffff, koyu zemin #0e1424 (CVD ΔE ≥ 8.4, normal ≥ 19.3). */
+:root {
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --ramp-250: #86b6ef; --ramp-350: #5598e7; --ramp-450: #2a78d6; --ramp-500: #256abf; --ramp-600: #184f95;
+  --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --serious: #ec835a; --crit: #d03b3b;
+  --viz-surface: #ffffff; --viz-ink: #0f172a; --viz-ink-2: #475569; --viz-muted: #7c8697;
+  --viz-grid: #edf0f4; --viz-axis: #c6ccd6; --viz-track: #e3ecf8; --viz-deemph: #b4bcc8;
+  --viz-border: rgb(15 23 42 / 0.09); --viz-hover: rgb(15 23 42 / 0.03); --viz-plane: #f4f6fa;
+}
+[data-theme="dark"] {
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --ramp-250: #184f95; --ramp-350: #1c5cab; --ramp-450: #256abf; --ramp-500: #2a78d6; --ramp-600: #5598e7;
+  --good-ink: #0ca30c;
+  --viz-surface: #0e1424; --viz-ink: #ffffff; --viz-ink-2: #c3cad6; --viz-muted: #8a93a3;
+  --viz-grid: #1c2435; --viz-axis: #364055; --viz-track: #17284a; --viz-deemph: #4a5568;
+  --viz-border: rgb(255 255 255 / 0.09); --viz-hover: rgb(255 255 255 / 0.03); --viz-plane: #0a0f1c;
 }

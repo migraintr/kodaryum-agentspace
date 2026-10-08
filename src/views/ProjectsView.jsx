@@ -36,7 +36,7 @@ function useAssign() {
 function GencSection() {
   const assign = useAssign()
   return (
-    <section className="rounded-2xl border border-fg/[0.08] bg-gradient-to-br from-emerald-500/[0.06] via-transparent to-sky-500/[0.06] p-5">
+    <section className="rounded-2xl border border-fg/[0.08] bg-gradient-to-br from-emerald-500/[0.06] via-transparent to-sky-500/[0.06] p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -392,7 +392,7 @@ function ActiveProjects() {
                     setChatProject(p.id)
                     openChat()
                   }}
-                  className="ml-auto cursor-pointer rounded-lg border border-fg/[0.12] px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 hover:bg-fg/[0.05]"
+                  className="ml-auto shrink-0 cursor-pointer whitespace-nowrap rounded-lg border border-fg/[0.12] px-2.5 py-1.5 text-[11.5px] font-medium text-ink-2 hover:bg-fg/[0.05]"
                 >
                   Sohbette aç
                 </button>
@@ -402,7 +402,7 @@ function ActiveProjects() {
                     setChatProject(p.id)
                     askAda(`${p.name} için `)
                   }}
-                  className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
+                  className="shrink-0 cursor-pointer whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold text-white"
                   style={{ background: p.color }}
                 >
                   Görev ver
@@ -448,7 +448,7 @@ export default function ProjectsView() {
         </div>
       }
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-fg/[0.07] px-5 py-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-fg/[0.07] px-3 py-3 sm:px-5">
         <Tabs
           value={tab}
           onChange={setTab}
@@ -469,7 +469,7 @@ export default function ProjectsView() {
                 ['in-progress', 'Geliştiriliyor'],
               ]}
             />
-            <div className="ml-auto">
+            <div className="w-full sm:ml-auto sm:w-auto">
               <SearchInput value={query} onChange={setQuery} placeholder="Proje, sektör veya teknoloji ara…" />
             </div>
           </>
@@ -477,7 +477,7 @@ export default function ProjectsView() {
       </div>
 
       <div className="relative min-h-0 flex-1">
-        <div className="h-full space-y-5 overflow-y-auto p-5">
+        <div className="h-full space-y-5 overflow-y-auto p-3 pb-20 sm:p-5">
           {tab === 'all' && <ActiveProjects />}
           {tab !== 'portfolio' && <GencSection />}
           {tab !== 'genc' && (

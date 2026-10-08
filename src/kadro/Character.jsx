@@ -7,12 +7,13 @@ import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { createDeskPose } from './deskPose.js'
 import { createGait } from './gait.js'
+import { LEVELS, useQuality } from '../quality.js'
 import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll, rollPalm } from './rig.js'
 
 export const MODELS = {
   // Depodaki (sıkıştırılmış) çalışan modelleri
-  man: '/agents/man.glb',
-  woman: '/agents/woman.glb',
+  man: new URL('../assets/agents/man.glb', import.meta.url).href, // src/assets: derlemede içerik özetli ad (1 yıl önbellek)
+  woman: new URL('../assets/agents/woman.glb', import.meta.url).href,
   // Yerel deneme modelleri (public/models, depoda yok)
   m: '/models/readyplayer.me.glb',
   f: '/models/Michelle.glb',
@@ -21,7 +22,28 @@ export const MODELS = {
   avatarsdk: '/models/avatarsdk.glb',
   brunette: '/models/brunette.glb',
 }
-const ANIMS = '/agents/anims.glb'
+const ANIMS = new URL('../assets/agents/anims.glb', import.meta.url).href
+// Uzak mesafe ağları (yalnızca geometri, ~%28 üçgen): aynı iskelete bağlı SkinnedMesh'lerin geometrisi değiştirilir
+const LODS = { man: new URL('../assets/agents/man-lod.glb', import.meta.url).href, woman: new URL('../assets/agents/woman-lod.glb', import.meta.url).href }
+Object.values(LODS).forEach((u) => useGLTF.preload(u))
+// Aktarılmış klipler model türü + hareket başına bir kez üretilir (21 karakter aynı iskeleti paylaşır; her biri yeniden örneklemesin)
+const CLIP_CACHE = new Map()
+const lodInfo = new WeakMap() // LOD sahnesi → { geo: ad → geometri, ok }
+function lodOf(lodScene, fullScene) {
+  let r = lodInfo.get(lodScene)
+  if (r) return r
+  const names = (sc) => {
+    let sk
+    sc.traverse((o) => o.isSkinnedMesh && !sk && (sk = o))
+    return sk?.skeleton.bones.map((b) => b.name).join()
+  }
+  const geo = new Map()
+  lodScene.traverse((o) => o.isMesh && o.geometry.attributes.skinIndex && geo.set(o.name, o.geometry))
+  const ok = geo.size > 0 && names(lodScene) === names(fullScene) // eklem sırası aynı değilse LOD kullanılmaz
+  if (!ok) console.warn('[LOD] eklem sırası uyuşmuyor, uzak ağ devre dışı')
+  lodInfo.set(lodScene, (r = { geo, ok }))
+  return r
+}
 ;[MODELS.man, MODELS.woman].forEach((u) => useGLTF.preload(u))
 useGLTF.preload(ANIMS)
 
@@ -69,6 +91,60 @@ function dye(mat, color, strength = 1) {
 }
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z)
+
+// CEO aksesuarları: altın kol saati, yaka iğnesi, mendil, manşet düğmeleri, yelek zinciri. Konumlar karakter uzayında
+// (metre; +z öne, +x karakterin soluna, +y yukarı) verilir ve bağlama pozunda kemiğin yerel uzayına çevrilir.
+const GOLD = new THREE.MeshStandardMaterial({ color: '#d9b04a', roughness: 0.22, metalness: 1, envMapIntensity: 1.6 })
+const SILK = new THREE.MeshStandardMaterial({ color: '#f4efe2', roughness: 0.4, metalness: 0.05 })
+const DIAL = new THREE.MeshStandardMaterial({ color: '#10131a', roughness: 0.25, metalness: 0.4 })
+function addCeoGear(model, bones) {
+  model.updateMatrixWorld(true)
+  const mq = new THREE.Quaternion()
+  model.getWorldQuaternion(mq)
+  const put = (bone, mesh, p, q) => {
+    if (!bone) return
+    const w = model.localToWorld(p.clone())
+    bone.parent && bone.updateWorldMatrix(true, false)
+    const bq = bone.getWorldQuaternion(new THREE.Quaternion())
+    const ws = bone.getWorldScale(new THREE.Vector3())
+    mesh.position.copy(bone.worldToLocal(w))
+    mesh.quaternion.copy(bq.invert().multiply(mq.clone().multiply(q ?? new THREE.Quaternion())))
+    mesh.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z)
+    mesh.traverse((o) => o.isMesh && ((o.castShadow = true), (o.userData.ceoGear = true)))
+    bone.add(mesh)
+  }
+  const mk = (geo, mat) => new THREE.Mesh(geo, mat)
+  const grp = (...c) => {
+    const g = new THREE.Group()
+    g.add(...c)
+    return g
+  }
+  // yaka iğnesi (sağ yaka; sol yakada ofis modelinin gül iğnesi var) ve ondan sol yelek cebine inen altın zincir
+  put(bones.Spine2, mk(new THREE.SphereGeometry(0.0085, 14, 10), GOLD), V(-0.072, 1.388, 0.122))
+  const chain = new THREE.CatmullRomCurve3([V(-0.072, 1.388, 0.126), V(-0.03, 1.27, 0.152), V(0.02, 1.215, 0.158), V(0.085, 1.235, 0.148)])
+  put(bones.Spine2, mk(new THREE.TubeGeometry(chain, 24, 0.0028, 6, false), GOLD), new THREE.Vector3(0, 0, 0))
+  put(bones.Spine2, mk(new THREE.SphereGeometry(0.007, 10, 8), GOLD), V(0.088, 1.232, 0.146))
+  // sol bilek: altın kasalı kol saati + manşet düğmesi
+  const watch = grp(mk(new THREE.TorusGeometry(0.0345, 0.006, 10, 28), GOLD), mk(new THREE.CylinderGeometry(0.019, 0.019, 0.005, 24), DIAL))
+  watch.children[1].position.set(0, 0.03, 0)
+  watch.children[1].rotation.x = 0
+  const lf = bones.LeftForeArm
+  if (lf) {
+    // kol ekseni boyunca bilek yakını: önkol kemiğinin %86'sı
+    const h = bones.LeftHand
+    const a = lf.getWorldPosition(new THREE.Vector3())
+    const bpos = h ? h.getWorldPosition(new THREE.Vector3()) : a.clone().add(new THREE.Vector3(0, -0.25, 0))
+    const wp = a.clone().lerp(bpos, 0.86)
+    const dir = bpos.clone().sub(a).normalize()
+    const qd = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir) // halka ekseni (Y) → kol ekseni
+    const ws = lf.getWorldScale(new THREE.Vector3())
+    watch.position.copy(lf.worldToLocal(wp.clone()))
+    watch.quaternion.copy(lf.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qd).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0))))
+    watch.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z)
+    watch.traverse((o) => o.isMesh && (o.castShadow = true))
+    lf.add(watch)
+  }
+}
 export const SEAT_H = 0.5 // sandalye oturak yüksekliği (m)
 
 // Hareket türleri: ayakta/yürüyüş prosedürel (gait.js), oturma prosedürel, diğerleri (agree/no) animasyon klibi
@@ -81,12 +157,14 @@ const _tv = new THREE.Vector3()
 export default function Character({ look, action = 'idle', height = 1.75, speed = 1, phase = 0, speaking = false, tablet = false, work = null, ...props }) {
   const { scene } = useGLTF(MODELS[look.model])
   const anim = useGLTF(ANIMS)
+  const lodScene = useGLTF(LODS[look.model] ?? MODELS[look.model]).scene
   const model = useMemo(() => clone(scene), [scene])
   const prefix = useMemo(() => prefixOf(model), [model])
   const rest = useMemo(() => restMap(model), [model])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
   const bones = useRef({})
   const blinkTargets = useRef([])
+  const lod = useRef({ meshes: [], far: false, tick: 0, skip: 0, acc: 0 })
 
   useEffect(() => {
     model.scale.setScalar(1)
@@ -110,6 +188,34 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       }
       o.material.envMapIntensity = 0.9
     })
+    if (look.ceo) {
+      // CEO: ipek parlaklığında kumaş, aynalı ayakkabı + altın aksesuarlar
+      model.traverse((o) => {
+        if (!o.isMesh || o.userData.ceoGear) return
+        const n = o.material.name
+        if (n === 'Wolf3D_Outfit_Top' || n === 'Wolf3D_Outfit_Bottom') {
+          o.material.roughness = 0.58
+          o.material.metalness = 0.04
+          o.material.envMapIntensity = 1.1
+        } else if (/Footwear|shoes/i.test(n)) {
+          o.material.roughness = 0.2
+          o.material.metalness = 0.3
+          o.material.envMapIntensity = 1.5
+        }
+      })
+      if (!model.userData.ceoGear) {
+        model.userData.ceoGear = true
+        addCeoGear(model, bones.current)
+      }
+    }
+    // Uzak mesafe ağı eşleşmeleri
+    const li = LODS[look.model] ? lodOf(lodScene, scene) : null
+    lod.current.meshes = []
+    if (li?.ok)
+      model.traverse((o) => {
+        const g = o.isSkinnedMesh && li.geo.get(o.name)
+        if (g) lod.current.meshes.push([o, o.geometry, g])
+      })
     // Göz kırpma morfları (varsa): eyeBlinkLeft/Right ya da eyesClosed
     blinkTargets.current = []
     model.traverse((o) => {
@@ -180,7 +286,9 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
         if (q) o.quaternion.copy(q)
       })
       model.updateMatrixWorld(true)
-      clip = clips.current[name] = bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+      const key = `${look.model}:${name}`
+      clip = clips.current[name] = CLIP_CACHE.get(key) ?? bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+      CLIP_CACHE.set(key, clip)
       for (const [o, q, pos] of saved) o.quaternion.copy(q), o.position.copy(pos)
       model.updateMatrixWorld(true)
     }
@@ -230,7 +338,27 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       posed.current = true
       requestAnimationFrame(() => (model.visible = true))
     }
+    // Mesafeye göre ağ ayrıntısı (her 8 karede bir bakılır; eşik farkı titremeyi önler)
+    const L = lod.current
+    if (L.meshes.length && (L.tick++ & 7) === 0) {
+      model.getWorldPosition(_tv)
+      const d = st.camera.position.distanceTo(_tv)
+      const near = LEVELS[useQuality.getState().level].lod
+      const far = L.far ? d > near * 0.85 : d > near
+      L.every = !far ? 1 : Math.max(LEVELS[useQuality.getState().level].seatedEvery, d > near * 1.8 ? 3 : 2) // uzak ve çok uzak: poz 1/2 ve 1/3 hızda
+      if (far !== L.far) {
+        L.far = far
+        for (const [o, hi, lo] of L.meshes) o.geometry = far ? lo : hi
+      }
+    }
     const bl = blend.current
+    // Uzaktaki masa başı çalışan: poz hesabı her N karede bir (geçen süre toplanıp verilir; geçişte atlanmaz)
+    if (L.far && SIT.has(action) && bl.last === action && bl.t >= 1 && ++L.skip % (L.every || 1) !== 0) {
+      L.acc += dt
+      return
+    }
+    dt += L.acc
+    L.acc = 0
     if (bl.last !== null && bl.last !== action) {
       bl.from = bonesAll.map((o) => o.quaternion.clone())
       bl.pos.copy(model.position)

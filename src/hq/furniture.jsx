@@ -2,9 +2,23 @@
 // saksı bitkileri, berjer, sehpa, kitaplık, duvar ekranı, dolap
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { RoundedBox } from '@react-three/drei'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { books, screenTex } from './textures.js'
 import { DESK_GEO as G, EXEC_GEO } from './plan.js'
+
+// drei RoundedBox her örnekte geometriyi (extrude + creased normals) baştan üretiyordu: ~40 masada yüzlerce kez.
+// Aynı ölçü/yarıçap için tek geometri paylaşılır (yükleme süresi ve bellek).
+const RB = new Map()
+function RoundedBox({ args, radius = 0.05, smoothness = radius < 0.012 ? 1 : 2, children, ...p }) {
+  const key = `${args}|${radius}|${smoothness}`
+  let g = RB.get(key)
+  if (!g) RB.set(key, (g = new RoundedBoxGeometry(args[0], args[1], args[2], smoothness, radius)))
+  return (
+    <mesh geometry={g} {...p}>
+      {children}
+    </mesh>
+  )
+}
 
 export const MAT = {
   deskTop: new THREE.MeshStandardMaterial({ color: '#f1f0ec', roughness: 0.45 }),
@@ -141,6 +155,21 @@ export function Rack({ ...p }) {
 }
 
 /** Saksı bitkisi: kavisli yaprak kümeleri (büyük: ficus/yucca, küçük: masa bitkisi) */
+// Yaprak geometrisi tüm bitkilerde ortak (önceden her bitki kendininkini 8 segmentle üretiyordu: sahnenin
+// üçgenlerinin çoğu bitki yapraklarıydı). 3 segment bu boyutta aynı görünür.
+const LEAF_GEO = (() => {
+  const s = new THREE.Shape()
+  s.moveTo(0, 0)
+  s.bezierCurveTo(0.22, 0.25, 0.2, 0.7, 0, 1)
+  s.bezierCurveTo(-0.2, 0.7, -0.22, 0.25, 0, 0)
+  const g = new THREE.ShapeGeometry(s, 3)
+  // yaprağı orta damarı boyunca hafifçe kıvır
+  const p = g.attributes.position
+  for (let i = 0; i < p.count; i++) p.setZ(i, Math.abs(p.getX(i)) * 0.35 - p.getY(i) * p.getY(i) * 0.25)
+  g.computeVertexNormals()
+  return g
+})()
+
 export function Plant({ size = 1, dark = false, ...p }) {
   const leaves = useMemo(() => {
     const out = []
@@ -157,18 +186,7 @@ export function Plant({ size = 1, dark = false, ...p }) {
     }
     return out
   }, [size])
-  const leafGeo = useMemo(() => {
-    const s = new THREE.Shape()
-    s.moveTo(0, 0)
-    s.bezierCurveTo(0.22, 0.25, 0.2, 0.7, 0, 1)
-    s.bezierCurveTo(-0.2, 0.7, -0.22, 0.25, 0, 0)
-    const g = new THREE.ShapeGeometry(s, 8)
-    // yaprağı orta damarı boyunca hafifçe kıvır
-    const p = g.attributes.position
-    for (let i = 0; i < p.count; i++) p.setZ(i, Math.abs(p.getX(i)) * 0.35 - p.getY(i) * p.getY(i) * 0.25)
-    g.computeVertexNormals()
-    return g
-  }, [])
+  const leafGeo = LEAF_GEO
   const pr = 0.16 * Math.max(0.7, size)
   return (
     <group {...p}>

@@ -53,5 +53,9 @@ export function Cut({ side, decor = false, children }) {
     const e = t * t * (3 - 2 * t)
     o.scale.y = 1 - (1 - LOW) * e
   })
-  return <group ref={g}>{children}</group>
+  return (
+    <group ref={g} userData={{ noMerge: true }}>
+      {children}
+    </group>
+  )
 }

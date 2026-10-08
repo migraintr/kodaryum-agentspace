@@ -10,6 +10,7 @@ import { Html } from '@react-three/drei'
 import { BookOpen, Coffee, Eye, Keyboard, Lightbulb, MousePointer2, StretchHorizontal } from 'lucide-react'
 import Character from '../kadro/Character.jsx'
 import { activityLabel, createWork, deskKit } from '../kadro/work.js'
+import { CEO_HEIGHT, CEO_LOOK } from '../kadro/looks.js'
 import { CEO, DEPT_BY_ID, PEOPLE, PERSON_BY_ID } from '../data.js'
 import { agentTask, useStore } from '../store.js'
 import { INSPECTOR, SEATS, STATES, ceoScript, inspectorScript } from './actors.js'
@@ -30,7 +31,7 @@ const HAIRS = ['#1a1410', '#2b1d14', '#0f0f10', '#3a2a1c', '#4a3324']
 const ACT_ICON = { type: Keyboard, mouse: MousePointer2, read: BookOpen, think: Lightbulb, glance: Eye, sip: Coffee, stretch: StretchHorizontal }
 
 const lookOf = (p, i) =>
-  p.long ? { model: 'woman', shoes: '#141416' } : { model: 'man', suit: SUITS[i % SUITS.length][0], vest: SUITS[i % SUITS.length][1], hair: HAIRS[i % HAIRS.length], shoes: '#16171a' }
+  p.id === CEO.id ? CEO_LOOK : p.long ? { model: 'woman', shoes: '#141416' } : { model: 'man', suit: SUITS[i % SUITS.length][0], vest: SUITS[i % SUITS.length][1], hair: HAIRS[i % HAIRS.length], shoes: '#16171a' }
 
 // O anki etkinlik (masa başı davranışından, yarım saniyede bir okunur)
 function Activity({ work, dept }) {
@@ -55,9 +56,9 @@ function Tag({ p, work }) {
   const task = useStore((s) => agentTask(s.tasks, p.id))
   const d = DEPT_BY_ID.get(p.dept)
   return (
-    <Html position={[0, 1.75, 0]} center zIndexRange={[30, 10]} style={{ pointerEvents: 'none' }}>
-      <div className="w-[190px] rounded-xl border border-slate-200 bg-white/95 p-2.5 text-slate-800 shadow-xl backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-100">
-        <p className="text-[13px] font-bold leading-tight">{p.name} {p.surname}</p>
+    <Html position={[0, p.id === CEO.id ? 1.85 : 1.75, 0]} center zIndexRange={[30, 10]} style={{ pointerEvents: 'none' }}>
+      <div className={`w-[190px] rounded-xl border bg-white/95 p-2.5 text-slate-800 shadow-xl backdrop-blur dark:bg-slate-900/95 dark:text-slate-100 ${p.id === CEO.id ? 'border-amber-400 shadow-[0_10px_30px_-10px_rgba(217,176,74,.6)]' : 'border-slate-200 dark:border-slate-700'}`}>
+        <p className="flex items-center gap-1 text-[13px] font-bold leading-tight">{p.id === CEO.id && <span className="text-amber-500" aria-hidden>♛</span>}{p.name} {p.surname}</p>
         <p className="text-[11px] text-slate-500 dark:text-slate-400">
           {p.role} · <span style={{ color: d?.color }}>{d?.name}</span>
         </p>
@@ -154,7 +155,7 @@ function Actor({ id, script, seat, tablet, work }) {
       }}
       onPointerOut={() => setHover(false)}
     >
-      <Character look={lookOf(p, i)} action={ui.action} speaking={ui.speaking} tablet={tablet} phase={(i * 0.137) % 1} work={work} />
+      <Character look={lookOf(p, i)} height={p.id === CEO.id ? CEO_HEIGHT : undefined} action={ui.action} speaking={ui.speaking} tablet={tablet} phase={(i * 0.137) % 1} work={work} />
       {ui.say && <Bubble p={p} text={ui.say} y={seated ? 1.62 : 2.12} />}
       {hover && !ui.say && <Tag p={p} work={ui.action === 'type' ? work : null} />}
     </group>

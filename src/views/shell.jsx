@@ -12,9 +12,9 @@ export function ViewShell({ icon: Icon, color = '#0ea5e9', title, subtitle, acti
       initial={{ opacity: 0, y: 16, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-      className={`absolute inset-3 z-20 flex flex-col overflow-hidden ${GLASS} bg-panel/92`}
+      className={`absolute inset-1.5 z-20 sm:inset-3 flex flex-col overflow-hidden ${GLASS} bg-panel/92`}
     >
-      <header className="flex flex-wrap items-center gap-3 border-b border-fg/[0.07] px-5 py-4">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2.5 border-b border-fg/[0.07] px-3 py-3 sm:px-5 sm:py-4">
         <span
           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
           style={{ color, background: alpha(color, 0.12), boxShadow: `inset 0 0 0 1px ${alpha(color, 0.35)}` }}
@@ -25,7 +25,7 @@ export function ViewShell({ icon: Icon, color = '#0ea5e9', title, subtitle, acti
           <h1 className="text-[17px] font-semibold text-ink">{title}</h1>
           {subtitle && <p className="mt-0.5 truncate text-[12px] text-ink-4">{subtitle}</p>}
         </div>
-        {actions}
+        {actions && <div className="order-last flex w-full min-w-0 flex-wrap items-center gap-2 sm:order-none sm:w-auto">{actions}</div>}
         <button
           type="button"
           onClick={() => setView('genel')}
@@ -55,13 +55,13 @@ export function Chip({ color, children, className = '' }) {
 /** Segment sekmeleri: items = [[id, etiket], …] */
 export function Tabs({ value, onChange, items }) {
   return (
-    <div className="flex rounded-lg border border-fg/[0.1] bg-fg/[0.03] p-0.5">
+    <div className="flex shrink-0 rounded-lg border border-fg/[0.1] bg-fg/[0.03] p-0.5">
       {items.map(([id, label]) => (
         <button
           key={id}
           type="button"
           onClick={() => onChange(id)}
-          className={`cursor-pointer rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
+          className={`cursor-pointer rounded-md px-3 py-1.5 text-[12px] font-medium whitespace-nowrap transition-colors ${
             value === id ? 'bg-panel text-ink shadow-sm ring-1 ring-fg/[0.08]' : 'text-ink-4 hover:text-ink-2'
           }`}
         >
@@ -78,7 +78,7 @@ export function SearchInput({ value, onChange, placeholder }) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-9 w-56 rounded-lg border border-fg/[0.1] bg-fg/[0.03] px-3 text-[12.5px] text-ink-2 placeholder:text-slate-400 focus:border-sky-400/50 focus:outline-none dark:placeholder:text-slate-500"
+      className="h-9 w-full rounded-lg sm:w-56 border border-fg/[0.1] bg-fg/[0.03] px-3 text-[12.5px] text-ink-2 placeholder:text-slate-400 focus:border-sky-400/50 focus:outline-none dark:placeholder:text-slate-500"
     />
   )
 }
