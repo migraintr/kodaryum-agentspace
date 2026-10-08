@@ -18,6 +18,30 @@ export const C = (r) => [(r.x[0] + r.x[1]) / 2, (r.z[0] + r.z[1]) / 2]
 
 // Masa merkezi (dünya koordinatı). Sandalye masanın 0,65 m önünde (+z), çalışan masaya (−z) bakar.
 export const CHAIR_GAP = 0.65
+// Çalışan, sandalye merkezinin 7 cm önünde oturur: karakter kökü → masa merkezi uzaklığı
+export const SEAT_TO_DESK = CHAIR_GAP - 0.07
+
+// Masa üstü yerleşimi (masanın kendi koordinatında: merkezde, çalışan +z tarafında oturup −z'ye bakar).
+// Klavye ve fare masanın ön kenarına ~12 cm uzaklıkta (oturan kişinin kolu rahatça yetişir).
+export const DESK_GEO = {
+  top: 0.7575, // tabla üst yüzü
+  kb: [0, 0.765, 0.2], // klavye gövde merkezi (42 × 1,6 × 13 cm)
+  kbTop: 0.774,
+  mouse: [0.34, 0.765, 0.2], // fare (6 × 2,2 × 10 cm)
+  mug: [-0.46, 0.7575, 0.2], // kahve kupası (sol ön)
+  dual: [
+    [-0.27, 1.02, -0.22, 0.12], // sol ekran: x, y, z, yön (rad)
+    [0.27, 1.02, -0.22, -0.12],
+  ],
+  single: [0, 1.07, -0.22, 0],
+  screen: { dual: [0.52, 0.3], single: [0.66, 0.38] }, // görüntü alanı (en × boy)
+}
+// CEO masası (yönetici masası 180° dönük): dizüstü bilgisayar masanın kendi koordinatında
+export const EXEC_GEO = {
+  laptop: [0, 0.79, 0.33], // taban merkezi; menteşe −z kenarında (z 0,21)
+  hinge: 0.21,
+  lid: -0.32, // kapak eğimi (geriye)
+}
 const at = (id, list) => {
   const [cx, cz] = C(ROOM_BY_ID.get(id))
   return list.map(([dx, dz, extra]) => ({ room: id, x: cx + dx, z: cz + dz, ...extra }))

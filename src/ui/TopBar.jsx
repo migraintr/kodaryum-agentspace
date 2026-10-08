@@ -1,5 +1,5 @@
 // Üst bar: menü · logo · Kağan'a hızlı erişim · çalışan sayacı · saat/tarih · gündüz/gece · profil
-import { Menu, Moon, Sparkles, Sun, Users } from 'lucide-react'
+import { CalendarDays, Menu, Moon, Sparkles, Sun, Users } from 'lucide-react'
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { Avatar, Logo, useNow } from './kit.jsx'
@@ -65,16 +65,32 @@ function Staff() {
   )
 }
 
+// Saat/tarih: tıklayınca Takvim ve Saat penceresi açılır (saniye noktası yanıp söner)
 function Clock() {
   const now = useNow(1000)
+  const setClockOpen = useStore((s) => s.setClockOpen)
   const d = new Date(now)
-  const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-  const date = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short' })
+  const opt = { timeZone: 'Europe/Istanbul' }
+  const [hh, mm] = d.toLocaleTimeString('tr-TR', { ...opt, hour: '2-digit', minute: '2-digit' }).split(':')
+  const date = d.toLocaleDateString('tr-TR', { ...opt, day: 'numeric', month: 'short', weekday: 'short' })
   return (
-    <span title={d.toLocaleString('tr-TR')} className="hidden flex-col items-end leading-none sm:flex">
-      <span className="font-mono text-[15px] font-bold text-[#13234d] tabular-nums dark:text-white">{time}</span>
-      <span className="mt-1 text-[10.5px] font-medium text-slate-400">{date}</span>
-    </span>
+    <button
+      type="button"
+      onClick={() => setClockOpen(true)}
+      title="Takvim ve saat"
+      aria-label={`Saat ${hh}:${mm}, ${date} — takvimi aç`}
+      className="group hidden h-10 cursor-pointer flex-col items-end justify-center rounded-xl px-2 leading-none transition-colors hover:bg-slate-900/[0.04] sm:flex dark:hover:bg-white/[0.06]"
+    >
+      <span className="font-mono text-[15px] font-bold text-[#13234d] tabular-nums dark:text-white">
+        {hh}
+        <span className={now % 2000 < 1000 ? 'opacity-100' : 'opacity-30'}>:</span>
+        {mm}
+      </span>
+      <span className="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-slate-400 group-hover:text-sky-500">
+        <CalendarDays size={10} />
+        {date}
+      </span>
+    </button>
   )
 }
 

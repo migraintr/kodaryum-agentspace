@@ -11,3 +11,10 @@ dist-ssr
 .idea
 .firebase
 public/models/
+
+# Google Cloud hizmet hesabı anahtarları (asla depoya girmez)
+key.json
+*key*.json
+service-account*.json
+.env.*
+!.env.example

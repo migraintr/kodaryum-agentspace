@@ -5,7 +5,9 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
-import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll } from './rig.js'
+import { createDeskPose } from './deskPose.js'
+import { createGait } from './gait.js'
+import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll, rollPalm } from './rig.js'
 
 export const MODELS = {
   // Depodaki (sıkıştırılmış) çalışan modelleri
@@ -69,7 +71,14 @@ function dye(mat, color, strength = 1) {
 const V = (x, y, z) => new THREE.Vector3(x, y, z)
 export const SEAT_H = 0.5 // sandalye oturak yüksekliği (m)
 
-export default function Character({ look, action = 'idle', height = 1.75, speed = 1, phase = 0, ...props }) {
+// Hareket türleri: ayakta/yürüyüş prosedürel (gait.js), oturma prosedürel, diğerleri (agree/no) animasyon klibi
+const LOCO = new Set(['walk', 'idle', 'inspect'])
+const SIT = new Set(['sit', 'type', 'chat'])
+const _tq = new THREE.Quaternion()
+const _tv = new THREE.Vector3()
+
+// work (work.js): masa başı davranışı verilirse oturan çalışan klavye/fare/okuma/düşünme döngüsüyle çalışır
+export default function Character({ look, action = 'idle', height = 1.75, speed = 1, phase = 0, speaking = false, tablet = false, work = null, ...props }) {
   const { scene } = useGLTF(MODELS[look.model])
   const anim = useGLTF(ANIMS)
   const model = useMemo(() => clone(scene), [scene])
@@ -77,6 +86,7 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
   const rest = useMemo(() => restMap(model), [model])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
   const bones = useRef({})
+  const blinkTargets = useRef([])
 
   useEffect(() => {
     model.scale.setScalar(1)
@@ -99,6 +109,15 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
         o.material.color = new THREE.Color(look.tint)
       }
       o.material.envMapIntensity = 0.9
+    })
+    // Göz kırpma morfları (varsa): eyeBlinkLeft/Right ya da eyesClosed
+    blinkTargets.current = []
+    model.traverse((o) => {
+      const d = o.isMesh && o.morphTargetDictionary
+      if (!d) return
+      const idx = ['eyeBlinkLeft', 'eyeBlinkRight'].map((k) => d[k]).filter((i) => i != null)
+      if (!idx.length && d.eyesClosed != null) idx.push(d.eyesClosed)
+      if (idx.length) blinkTargets.current.push([o, idx])
     })
     // Şapka gizlenince kısa kesim saç: kafa derisi bağlama pozundaki (bind pose) konuma göre boyanır —
     // tepe, şakaklar ve ense saç rengini alır, alın ve yüz açık kalır; hafif doku gürültüsü saç telini andırır.
@@ -143,12 +162,12 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
   const clips = useRef({})
   const current = useRef(null)
   useEffect(() => {
-    if (action === 'type' || action === 'sit') {
+    if (SIT.has(action) || LOCO.has(action)) {
       mixer.stopAllAction()
       current.current = null
       return
     }
-    const name = { idle: 'idle', walk: 'walk', agree: 'agree', no: 'headShake' }[action] ?? 'idle'
+    const name = { agree: 'agree', no: 'headShake' }[action] ?? 'idle'
     let clip = clips.current[name]
     if (!clip) {
       // Aktarım her zaman bağlama pozundan yapılır. (Önceden o anki animasyonlu poz "dinlenme" sanılıyordu:
@@ -174,49 +193,117 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     current.current = a
   }, [action]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sit = action === 'type' || action === 'sit'
+  const sit = SIT.has(action)
+  const desk = work && (action === 'type' || action === 'sit') // masa başında çalışıyor
+  const deskPose = useRef(null)
+  const blink = useRef({ at: 1 + phase * 4, t: -9 })
   const drop = useRef(0)
   const posed = useRef(false)
+  const gait = useRef(null)
+  const bonesAll = useMemo(() => {
+    const a = []
+    model.traverse((o) => o.isBone && a.push(o))
+    return a
+  }, [model])
+  // Hareket değişince (otur ↔ kalk ↔ yürü) son pozdan yenisine 0,5 sn'de yumuşak geçiş
+  const blend = useRef({ last: null, from: null, pos: new THREE.Vector3(), t: 1 })
+  // Tablet (sağ elde): kök grubuna eklenir, her karede ele taşınır
+  const tabletObj = useMemo(() => {
+    if (!tablet) return null
+    const g = new THREE.Group()
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.011, 0.26), new THREE.MeshStandardMaterial({ color: '#1b1f27', roughness: 0.4, metalness: 0.3 }))
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.235), new THREE.MeshBasicMaterial({ color: '#8fd3ff', toneMapped: false }))
+    screen.rotation.x = -Math.PI / 2
+    screen.position.y = 0.0062
+    body.castShadow = true
+    g.add(body, screen)
+    return g
+  }, [tablet])
   useEffect(() => {
     model.visible = false // ilk poz uygulanana kadar gizli: T-pozu hiç görünmez
     posed.current = false
   }, [model])
   useFrame((st, dt) => {
-    if (!posed.current && (sit ? bones.current.Hips : true)) {
+    const b = bones.current
+    if (!b.Hips) return // iskelet henüz hazırlanmadı
+    if (!posed.current) {
       posed.current = true
       requestAnimationFrame(() => (model.visible = true))
     }
-    if (!sit) {
-      model.position.y = 0
-      mixer.update(dt)
-      const b = bones.current
-      if (!b.Hips || !b.LeftFoot) return
-      model.updateMatrixWorld(true)
-      // Ayakların ileri-geri farkı → kolu karşı yöne salla (sol ayak öndeyse sağ kol önde)
-      const lf = model.worldToLocal(b.LeftFoot.getWorldPosition(new THREE.Vector3()))
-      const rf = model.worldToLocal(b.RightFoot.getWorldPosition(new THREE.Vector3()))
-      const step = (lf.z - rf.z) / (Math.abs(lf.z - rf.z) + 0.35) // −1..1
-      const walking = action === 'walk'
-      const w = walking ? 0.9 : 0.55
-      for (const sd of [1, -1]) {
-        const L = sd > 0 ? 'Left' : 'Right'
-        const swing = walking ? -sd * step * 0.62 : 0
-        aim(b[`${L}Arm`], V(sd * 0.13, -1, swing), model, w)
-        aim(b[`${L}ForeArm`], V(sd * 0.05, -1, swing + 0.18 + Math.max(0, swing) * 0.5), model, w)
-        aim(b[`${L}Hand`], V(sd * 0.02, -1, swing + 0.12), model, w * 0.8)
+    const bl = blend.current
+    if (bl.last !== null && bl.last !== action) {
+      bl.from = bonesAll.map((o) => o.quaternion.clone())
+      bl.pos.copy(model.position)
+      bl.t = 0
+      if (LOCO.has(action) && !LOCO.has(bl.last)) gait.current?.reset()
+    }
+    bl.last = action
+    pose(st, dt, b)
+    if (bl.t < 1 && bl.from) {
+      bl.t = Math.min(1, bl.t + dt / 0.5)
+      const w = bl.t * bl.t * (3 - 2 * bl.t)
+      bonesAll.forEach((o, i) => {
+        _tq.copy(o.quaternion)
+        o.quaternion.copy(bl.from[i]).slerp(_tq, w)
+      })
+      model.position.lerpVectors(bl.pos, _tv.copy(model.position), w)
+    }
+    // göz kırpma (masa başında work.js'in ritmi, diğer durumlarda kendi zamanlayıcısı)
+    if (blinkTargets.current.length) {
+      let v
+      if (desk) v = work.S.blink
+      else {
+        const k = blink.current
+        const now = st.clock.elapsedTime
+        if (now > k.at) {
+          k.t = now
+          k.at = now + 1.8 + Math.random() * 3.7
+        }
+        const x = now - k.t
+        v = x < 0.07 ? x / 0.07 : x < 0.17 ? 1 - (x - 0.07) / 0.1 : 0
       }
+      for (const [o, idx] of blinkTargets.current) for (const i of idx) o.morphTargetInfluences[i] = v
+    }
+    if (tabletObj && b.RightHand) {
+      const root = model.parent
+      model.updateMatrixWorld(true)
+      root.worldToLocal(b.RightHand.getWorldPosition(tabletObj.position))
+      tabletObj.position.x += 0.07
+      tabletObj.position.y += 0.03
+      tabletObj.position.z += 0.07
+      tabletObj.rotation.set(sit ? -0.35 : -0.6, 0.15, 0)
+    }
+  })
+
+  function pose(st, dt, b) {
+    if (LOCO.has(action)) {
+      gait.current ??= createGait(model, b, rest)
+      gait.current.update(dt, st.clock.elapsedTime + phase * 13, { inspect: action === 'inspect', tablet })
+      return
+    }
+    if (desk) {
+      deskPose.current ??= createDeskPose(model, b, rest, SEAT_H)
+      // başın karakter uzayındaki konumu (önceki kare) davranışa verilir: çene, ağız, esneme hedefleri buna göre
+      const head = b.Head ? model.parent.worldToLocal(b.Head.getWorldPosition(_tv)) : null
+      work.update(dt, { busy: action === 'type', head })
+      deskPose.current.pose(st.clock.elapsedTime + phase * 13, dt, work.S, phase)
+      work.afterPose?.(dt)
+      return
+    }
+    if (!sit) {
+      model.position.set(0, 0, 0)
+      mixer.update(dt)
       return
     }
     const { clock } = st
-    // Oturma / yazma: dinlenme pozundan başlayıp her kemiği karakter uzayında hedef yöne çevir.
+    // Oturma / yazma / sohbet: dinlenme pozundan başlayıp her kemiği karakter uzayında hedef yöne çevir.
     // Model +Z yönüne bakar; karakterin solu +X.
-    const b = bones.current
-    if (!b.Hips) return // iskelet henüz hazırlanmadı
     for (const [n, q] of rest) b[n]?.quaternion.copy(q)
-    model.position.y = 0
+    model.position.set(0, 0, 0)
     model.updateMatrixWorld(true)
     const t = clock.elapsedTime + phase * 13
     const typing = action === 'type'
+    const chat = action === 'chat'
     const sm = (a, z, x) => {
       const k = Math.min(1, Math.max(0, (x - a) / (z - a)))
       return k * k * (3 - 2 * k)
@@ -231,7 +318,7 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     const A = (n, x, y, z, w) => aim(b[n], V(x, y, z), model, w)
 
     // gövde: hafif öne eğik, nefes; fareye uzanırken çok hafif döner
-    A('Spine', mouse * -0.03, 1, 0.08 - lean * 0.22 + breath)
+    A('Spine', mouse * -0.03, 1, (chat ? -0.06 : 0.08) - lean * 0.22 + breath)
     A('Spine1', mouse * -0.04, 1, 0.13 - lean * 0.18 + burst * 0.02)
     A('Spine2', 0, 1, 0.11 - lean * 0.1)
     for (const s of [1, -1]) {
@@ -239,6 +326,19 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       A(`${L}UpLeg`, s * 0.08, -0.05, 1)
       A(`${L}Leg`, s * 0.02 + Math.sin(t * 0.3 + s) * 0.01, -1, 0.12)
       A(`${L}Foot`, 0, -0.35, 1)
+      if (chat) {
+        // sohbet: dirsekler koltuk kolunda, eller kucakta; konuşurken eller anlatır, dinlerken arada başını sallar
+        const g = speaking ? (0.5 + 0.5 * Math.sin(t * (s > 0 ? 2.6 : 3.3) + s)) * (s < 0 ? 1 : 0.6) : 0
+        A(`${L}Arm`, s * 0.42, -1, 0.18 + g * 0.25)
+        A(`${L}ForeArm`, -s * (0.15 + g * 0.1), -0.25 + g * 0.55, 1)
+        A(`${L}Hand`, -s * 0.1, -0.35 + g * 0.6, 1)
+        rollPalm(b[`${L}Hand`], b[`${L}HandIndex1`], b[`${L}HandPinky1`], V(-s * 0.5, 0.8 + g, g), model, s, 0.9)
+        for (const f of ['Index', 'Middle', 'Ring', 'Pinky']) {
+          A(`${L}Hand${f}1`, 0, -0.4 + g * 0.3, 1, 0.8)
+          A(`${L}Hand${f}2`, 0, -0.8 + g * 0.4, 1, 0.8)
+        }
+        continue
+      }
       // kollar: dirsekler gövde yanında, ön kollar klavyeye uzanır; sağ el fareye geçer
       const m = s < 0 ? mouse : 0
       A(`${L}Arm`, s * 0.3, -1, 0.42 - lean * 0.3 + m * 0.05)
@@ -268,8 +368,14 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     // baş: ekranı okur (küçük yatay göz/baş taramaları), ara sıra klavyeye, nadiren ofise bakar
     const read = Math.sin(t * 0.85 + phase * 3) * 0.035 * (1 - glance)
     const down = typing ? sm(0.6, 0.9, Math.sin(t * 0.37 + phase * 11)) * 0.12 : 0
-    A('Neck', read * 0.5, 1, 0.22 - glance * 0.12 + down * 0.4)
-    A('Head', read + Math.sin(t * 0.21 + phase) * 0.25 * glance + mouse * -0.04, 1, 0.2 - glance * 0.12 + down)
+    if (chat) {
+      const nodL = speaking ? Math.sin(t * 3.1) * 0.05 : Math.max(0, Math.sin(t * 1.3 + phase)) ** 12 * 0.18
+      A('Neck', 0, 1, 0.08)
+      A('Head', Math.sin(t * 0.7) * 0.06, 1, 0.06 + nodL)
+    } else {
+      A('Neck', read * 0.5, 1, 0.22 - glance * 0.12 + down * 0.4)
+      A('Head', read + Math.sin(t * 0.21 + phase) * 0.25 * glance + mouse * -0.04, 1, 0.2 - glance * 0.12 + down)
+    }
 
     // kalçayı oturak yüksekliğine indir (ayaklar yere değer)
     if (!drop.current) {
@@ -278,11 +384,12 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       drop.current = (hip.y - model.parent.getWorldPosition(new THREE.Vector3()).y) - SEAT_H - 0.08
     }
     model.position.y = -drop.current / model.parent.getWorldScale(new THREE.Vector3()).y
-  })
+  }
 
   return (
     <group {...props}>
       <primitive object={model} />
+      {tabletObj && <primitive object={tabletObj} />}
     </group>
   )
 }

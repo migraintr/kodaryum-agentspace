@@ -711,7 +711,7 @@ function Launcher() {
             <span className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
               {peek.from === 'CEO' ? 'Kağan · CEO' : peek.agent} {peek.project && <ProjectChip id={peek.project} />}
             </span>
-            <span className="mt-1 line-clamp-2 block text-[12.5px] text-ink-2">{peek.text}</span>
+            <span className="mt-1 line-clamp-2 text-[12.5px] text-ink-2">{peek.text}</span>
           </motion.button>
         )}
       </AnimatePresence>

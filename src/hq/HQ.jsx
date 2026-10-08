@@ -1,7 +1,8 @@
 // Kodaryum HQ — referans izometrik ofis katının 3B modeli (sıfırdan).
 // Kat: 30 × 17 m. Arka sıra: Yazılım · CEO Ofisi · Tasarım; geniş koridor; ön sıra: Pazarlama · Araştırma ·
 // Muhasebe · Operasyon. Her odada renkli vurgu duvarı + aynı tonda halı; cam bölmeler siyah çerçeveli.
-// Odaya tıklayınca kamera o odaya süzülür (store.roomId).
+// Odaya tıklayınca kamera o odaya süzülür (store.roomId). Kat 360° döner (CameraRig); kamera bir duvarın
+// arkasına geçince o duvarlar alçalır (cutaway.jsx).
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Html, OrbitControls, RoundedBox } from '@react-three/drei'
@@ -15,7 +16,11 @@ import { ICONS, alpha } from '../ui/kit.jsx'
 import { Bookshelf, Cabinet, Chair, CoffeeTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
 import { greenery, moodboard, rugTex, stickyBoard, terrazzo, whiteboard } from './textures.js'
 import Agents from './Agents.jsx'
+import { LogoSign } from './LogoSign.jsx'
+import { CameraRig, HOME, LIMITS } from './CameraRig.jsx'
+import { Cut, CutawayDriver } from './cutaway.jsx'
 import { BACK, C, CEO_DESK, CEO_SEAT, CHAIR_GAP, DESKS, FRONT, H, ROOMS, W } from './plan.js'
+import { OCCUPIED } from './seating.js'
 
 const T = 0.35 // dış duvar kalınlığı
 export { ROOMS }
@@ -136,15 +141,6 @@ function WindowBand({ x, z, y0 = 1.75, y1 = H }) {
   )
 }
 
-function Hexagon({ position, r = 0.32 }) {
-  const geo = useMemo(() => new THREE.TorusGeometry(r, 0.022, 8, 6), [r])
-  return (
-    <mesh geometry={geo} position={position} rotation-z={Math.PI / 6}>
-      <meshBasicMaterial color="#9ec5ff" toneMapped={false} />
-    </mesh>
-  )
-}
-
 // ─── Kabuk: zemin döşemesi + dış duvarlar ───────────────────────────────────
 function Shell() {
   const floor = useMemo(() => {
@@ -167,14 +163,14 @@ function Shell() {
         <meshStandardMaterial map={floor} color="#e3eaf0" roughness={0.32} metalness={0.02} envMapIntensity={0.8} />
       </mesh>
       {/* arka dış duvar (tam boy, iç yüzü beyaz) */}
-      {box([W + 2 * T, H, T], [0, H / 2, BACK[0] - T / 2], shellMat)}
+      <Cut side="back">{box([W + 2 * T, H, T], [0, H / 2, BACK[0] - T / 2], shellMat)}</Cut>
       {/* yan duvarlar: arka sıra boyunca tam, sonra kademeli alçalır */}
       {[-1, 1].map((s) => (
-        <group key={s}>
+        <Cut key={s} side={s < 0 ? 'left' : 'right'}>
           {box([T, H, BACK[1] - BACK[0] + T], [s * (W / 2 + T / 2), H / 2, (BACK[0] - T + BACK[1]) / 2], shellMat)}
           {box([T, 1.25, FRONT[1] - BACK[1] + T], [s * (W / 2 + T / 2), 0.625, (BACK[1] + FRONT[1] + T) / 2], shellMat)}
           {box([T + 0.02, 0.04, FRONT[1] - BACK[0] + 2 * T], [s * (W / 2 + T / 2), 1.27, (BACK[0] + FRONT[1]) / 2], shellTop, false)}
-        </group>
+        </Cut>
       ))}
       {/* ön alçak duvar */}
       {box([W + 2 * T, 0.75, T], [0, 0.375, FRONT[1] + T / 2], shellMat)}
@@ -187,7 +183,7 @@ function Shell() {
 function DeskRow({ id, n0 = 0 }) {
   return DESKS[id].map((d, i) => (
     <group key={i}>
-      <Desk n={n0 + i * 2} dual={d.dual ?? true} screen={d.screen ?? 'code'} position={[d.x, 0, d.z]} scale={[d.scale ?? 1, 1, 1]} />
+      <Desk n={n0 + i * 2} dual={d.dual ?? true} screen={d.screen ?? 'code'} mouse={!OCCUPIED.has(`${id}:${i}`)} position={[d.x, 0, d.z]} scale={[d.scale ?? 1, 1, 1]} />
       <Chair position={[d.x, 0, d.z + CHAIR_GAP]} />
     </group>
   ))
@@ -198,12 +194,17 @@ function Software() {
   const r = ROOMS[0]
   const [cx, cz] = C(r)
   const wz = r.z[0]
+  const blue = useMemo(() => new THREE.MeshStandardMaterial({ color: r.accent, roughness: 0.85 }), [r.accent])
   return (
     <group>
-      <AccentWall x={[r.x[0], r.x[0] + 3.2]} z={wz} color={r.accent} />
-      {box([0.12, H, r.z[1] - r.z[0]], [r.x[0] + 0.06, H / 2, cz], new THREE.MeshStandardMaterial({ color: r.accent, roughness: 0.85 }))}
-      {box([r.x[1] - r.x[0] - 3.2, 1.75, 0.12], [(r.x[0] + 3.2 + r.x[1]) / 2, 0.875, wz + 0.06], whiteWall)}
-      <WindowBand x={[r.x[0] + 3.2, r.x[1]]} z={wz} y0={1.75} />
+      <Cut side="back">
+        <AccentWall x={[r.x[0], r.x[0] + 3.2]} z={wz} color={r.accent} />
+        {box([r.x[1] - r.x[0] - 3.2, 1.75, 0.12], [(r.x[0] + 3.2 + r.x[1]) / 2, 0.875, wz + 0.06], whiteWall)}
+      </Cut>
+      <Cut side="back" decor>
+        <WindowBand x={[r.x[0] + 3.2, r.x[1]]} z={wz} y0={1.75} />
+      </Cut>
+      <Cut side="left">{box([0.12, H, r.z[1] - r.z[0]], [r.x[0] + 0.06, H / 2, cz], blue)}</Cut>
       {/* mavi LED şeridi */}
       <mesh position={[(r.x[0] + 3.2 + r.x[1]) / 2, 0.03, wz + 0.2]}>
         <boxGeometry args={[r.x[1] - r.x[0] - 3.4, 0.02, 0.05]} />
@@ -214,10 +215,12 @@ function Software() {
       <Plant size={1.15} position={[cx - 0.6, 0, wz + 0.5]} />
       <Plant size={1.5} position={[r.x[1] - 0.6, 0, wz + 0.5]} />
       {/* beyaz tahta (sol duvar) */}
-      <mesh position={[r.x[0] + 0.13, 1.4, cz + 1]} rotation-y={Math.PI / 2}>
-        <planeGeometry args={[1.8, 1]} />
-        <meshStandardMaterial map={whiteboard()} roughness={0.3} />
-      </mesh>
+      <Cut side="left" decor>
+        <mesh position={[r.x[0] + 0.13, 1.4, cz + 1]} rotation-y={Math.PI / 2}>
+          <planeGeometry args={[1.8, 1]} />
+          <meshStandardMaterial map={whiteboard()} roughness={0.3} />
+        </mesh>
+      </Cut>
       <Rug room={r} w={8} d={4.6} dx={0.4} dz={0.4} />
       <DeskRow id="yazilim" />
     </group>
@@ -232,12 +235,15 @@ function CeoOffice() {
   return (
     <group>
       {/* lacivert arka duvar, solda yeşilliğe açılan cam kapı */}
-      {box([r.x[1] - r.x[0] - 1.4, H, 0.12], [cx + 0.7, H / 2, wz + 0.06], navy)}
-      <WindowBand x={[r.x[0], r.x[0] + 1.4]} z={wz} y0={0} />
-      <WindowBand x={[r.x[0] + 1.4, r.x[1]]} z={wz} y0={2.55} />
-      <WallTV kind="company" w={2.3} h={1.3} position={[cx, 1.6, wz + 0.14]} />
-      <Hexagon position={[cx + 2.1, 1.75, wz + 0.14]} />
-      <pointLight position={[cx + 2.1, 1.75, wz + 0.5]} color="#8fb8ff" intensity={0.8} distance={2.2} />
+      <Cut side="back">{box([r.x[1] - r.x[0] - 1.4, H, 0.12], [cx + 0.7, H / 2, wz + 0.06], navy)}</Cut>
+      <Cut side="back" decor>
+        <WindowBand x={[r.x[0], r.x[0] + 1.4]} z={wz} y0={0} />
+        <WindowBand x={[r.x[0] + 1.4, r.x[1]]} z={wz} y0={2.55} />
+        <WallTV kind="company" w={2.3} h={1.3} position={[cx, 1.6, wz + 0.14]} />
+        {/* ışıklı logo tabelası (TV'nin sağında, lacivert duvarda) */}
+        <LogoSign position={[cx + 1.85, 1.86, wz + 0.122]} />
+      </Cut>
+      <pointLight position={[cx + 1.85, 1.9, wz + 0.65]} color="#7f9bff" intensity={1.3} distance={3.2} />
       <Rug room={r} w={6} d={4} dz={0.5} />
       <ExecDesk position={[CEO_DESK.x, 0, CEO_DESK.z]} rotation-y={Math.PI} />
       <Chair exec position={[CEO_SEAT.x, 0, CEO_SEAT.z]} rotation-y={Math.PI} />
@@ -259,12 +265,14 @@ function Design() {
   const pink = useMemo(() => new THREE.MeshStandardMaterial({ color: r.accent, roughness: 0.85 }), [r.accent])
   return (
     <group>
-      {box([r.x[1] - r.x[0], 1.75, 0.12], [cx, 0.875, wz + 0.06], pink)}
-      <WindowBand x={r.x} z={wz} y0={1.75} />
-      <mesh position={[cx + 0.6, 1.05, wz + 0.14]}>
-        <planeGeometry args={[5.4, 1.4]} />
-        <meshStandardMaterial map={moodboard()} roughness={0.8} />
-      </mesh>
+      <Cut side="back">{box([r.x[1] - r.x[0], 1.75, 0.12], [cx, 0.875, wz + 0.06], pink)}</Cut>
+      <Cut side="back" decor>
+        <WindowBand x={r.x} z={wz} y0={1.75} />
+        <mesh position={[cx + 0.6, 1.05, wz + 0.14]}>
+          <planeGeometry args={[5.4, 1.4]} />
+          <meshStandardMaterial map={moodboard()} roughness={0.8} />
+        </mesh>
+      </Cut>
       {/* uzun alçak dolap */}
       {box([6.5, 0.7, 0.45], [cx + 0.4, 0.35, wz + 0.35], MAT.pedestal)}
       <Rug room={r} w={7.2} d={3.6} dx={0.2} dz={0.6} />
@@ -284,11 +292,15 @@ function Marketing() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <mesh position={[cx - 0.2, 1.45, wz + 0.13]}>
-        <planeGeometry args={[2.4, 1.2]} />
-        <meshStandardMaterial map={stickyBoard()} roughness={0.5} />
-      </mesh>
+      <Cut side="mid">
+        <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      </Cut>
+      <Cut side="mid" decor>
+        <mesh position={[cx - 0.2, 1.45, wz + 0.13]}>
+          <planeGeometry args={[2.4, 1.2]} />
+          <meshStandardMaterial map={stickyBoard()} roughness={0.5} />
+        </mesh>
+      </Cut>
       <Rug room={r} w={5.8} d={5} dz={0.9} />
       <DeskRow id="pazarlama" n0={10} />
       <Cabinet w={1} position={[r.x[1] - 1.2, 0, wz + 0.35]} />
@@ -304,8 +316,12 @@ function Research() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <WallTV kind="research" w={2.6} h={1.1} position={[cx + 0.3, 1.5, wz + 0.14]} />
+      <Cut side="mid">
+        <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      </Cut>
+      <Cut side="mid" decor>
+        <WallTV kind="research" w={2.6} h={1.1} position={[cx + 0.3, 1.5, wz + 0.14]} />
+      </Cut>
       <Rug room={r} w={5.8} d={3.6} dz={0.5} />
       <DeskRow id="arastirma" n0={20} />
       <Plant size={0.9} position={[r.x[1] - 0.8, 0, wz + 0.7]} />
@@ -321,8 +337,12 @@ function Accounting() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <WallTV kind="finance" w={2.6} h={1.2} position={[cx + 0.6, 1.55, wz + 0.14]} />
+      <Cut side="mid">
+        <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      </Cut>
+      <Cut side="mid" decor>
+        <WallTV kind="finance" w={2.6} h={1.2} position={[cx + 0.6, 1.55, wz + 0.14]} />
+      </Cut>
       {/* arşiv dolapları (sağ duvar) ve kasa */}
       {[0, 1, 2].map((i) => (
         <group key={i} position={[r.x[1] - 0.38, 0, cz - 1.6 + i * 0.62]}>
@@ -350,8 +370,12 @@ function Operations() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
-      <WallTV kind="map" w={2.8} h={1.4} position={[cx - 0.8, 1.6, wz + 0.14]} />
+      <Cut side="mid">
+        <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      </Cut>
+      <Cut side="mid" decor>
+        <WallTV kind="map" w={2.8} h={1.4} position={[cx - 0.8, 1.6, wz + 0.14]} />
+      </Cut>
       {[0, 1, 2].map((i) => <Rack key={i} position={[r.x[1] - 2.4 + i * 0.65, 0, wz + 0.6]} />)}
       <Rug room={r} w={5.2} d={3.4} dx={-0.6} dz={0.5} />
       <DeskRow id="operasyon" n0={30} />
@@ -390,12 +414,23 @@ function Partitions() {
 }
 
 // ─── Etkileşim: oda alanları, tabelalar, kamera ─────────────────────────
+// Tabela, kameraya göre odanın uzak-sol köşesinde durur (kat döndükçe yer değiştirir; yazı odanın içine uzanır)
+const LABEL_CORNER = [
+  [0, 0], // önden bakış: arka-sol
+  [0, 1], // sağdan
+  [1, 1], // arkadan
+  [1, 0], // soldan
+]
 function RoomZones() {
   const { focusRoom, hoverRoom } = useStore.getState()
   const roomId = useStore((s) => s.roomId)
   const hovered = useStore((s) => s.hoveredRoom)
+  const quad = useStore((s) => Math.round(s.camAz / 90) % 4)
+  const [kx, kz] = LABEL_CORNER[quad]
   return ROOMS.map((r) => {
     const [cx, cz] = C(r)
+    const lx = kx ? r.x[1] - 0.4 : r.x[0] + 0.4
+    const lz = kz ? r.z[1] - 0.3 : r.z[0] + 0.3
     const d = DEPT_BY_ID.get(r.id)
     const Icon = ICONS[d?.icon]
     const on = roomId === r.id || hovered === r.id
@@ -406,22 +441,21 @@ function RoomZones() {
           rotation-x={-Math.PI / 2}
           onPointerOver={(e) => {
             e.stopPropagation()
-            hoverRoom(r.id)
-            document.body.style.cursor = 'pointer'
+            hoverRoom(r.id) // imleç (el işareti) CameraRig'de
           }}
           onPointerOut={() => {
             if (useStore.getState().hoveredRoom === r.id) hoverRoom(null)
-            document.body.style.cursor = ''
           }}
           onClick={(e) => {
             e.stopPropagation()
-            if (e.delta <= 4) focusRoom(r.id)
+            // çift tıkın ikinci tıkı odağı kapatmasın (çift tık o noktaya yaklaşır)
+            if (e.delta <= 4 && e.nativeEvent.detail < 2) focusRoom(r.id)
           }}
         >
           <planeGeometry args={[r.x[1] - r.x[0] - 0.1, r.z[1] - r.z[0] - 0.1]} />
           <meshBasicMaterial color={d?.color ?? '#fff'} transparent opacity={on ? 0.1 : 0} depthWrite={false} />
         </mesh>
-        <Html position={[r.x[0] + 0.4, r.z === BACK ? H + 0.35 : H + 0.1, r.z[0] + 0.3]} zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+        <Html position={[lx, r.z === BACK ? H + 0.35 : H + 0.1, lz]} zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
@@ -442,55 +476,6 @@ function RoomZones() {
       </group>
     )
   })
-}
-
-const HOME = { target: new THREE.Vector3(0, 0, -0.2), pos: new THREE.Vector3(0, 21, 23) }
-function CameraRig() {
-  const roomId = useStore((s) => s.roomId)
-  const camReset = useStore((s) => s.camReset)
-  const controls = useThree((s) => s.controls)
-  const camera = useThree((s) => s.camera)
-  const goal = useRef(null)
-  useEffect(() => {
-    const r = ROOMS.find((x) => x.id === roomId)
-    if (!r) goal.current = HOME
-    else {
-      const [cx, cz] = C(r)
-      const t = new THREE.Vector3(cx, 0.6, cz)
-      goal.current = { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5)) }
-    }
-  }, [roomId, camReset])
-  // Kullanıcı sürükleyip yakınlaştırınca: süzülmeyi bırak, "Genel görünüm" düğmesini göster
-  useEffect(() => {
-    if (!controls) return
-    const onStart = () => (goal.current = null)
-    const onChange = () => {
-      if (goal.current) return
-      const moved = camera.position.distanceTo(HOME.pos) > 0.3 || controls.target.distanceTo(HOME.target) > 0.15
-      useStore.getState().setCamMoved(moved)
-    }
-    controls.addEventListener('start', onStart)
-    controls.addEventListener('change', onChange)
-    return () => {
-      controls.removeEventListener('start', onStart)
-      controls.removeEventListener('change', onChange)
-    }
-  }, [controls, camera])
-  useFrame((_, dt) => {
-    const g = goal.current
-    if (!g || !controls) return
-    const k = 1 - Math.exp(-dt * 3)
-    camera.position.lerp(g.pos, k)
-    controls.target.lerp(g.target, k)
-    controls.update()
-    if (camera.position.distanceToSquared(g.pos) < 1e-4 && controls.target.distanceToSquared(g.target) < 1e-4) {
-      camera.position.copy(g.pos)
-      controls.target.copy(g.target)
-      controls.update()
-      goal.current = null
-    }
-  })
-  return null
 }
 
 // Suspense içindeki her şey yüklendikten sonra: shader'ları önceden derle, birkaç kare bekle
@@ -532,8 +517,10 @@ export default function HQ() {
           <Agents />
           <SceneReady />
         </Suspense>
-        <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping minDistance={6} maxDistance={55} maxPolarAngle={1.25} minAzimuthAngle={-0.8} maxAzimuthAngle={0.8} />
+        {/* 360°: yön sınırı yok; eğim zeminin altına inmez, kuşbakışına kadar çıkar */}
+        <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping dampingFactor={0.08} rotateSpeed={0.7} screenSpacePanning={false} {...LIMITS} />
         <CameraRig />
+        <CutawayDriver />
         <EffectComposer multisampling={0}>
           <N8AO aoRadius={0.6} intensity={1.6} distanceFalloff={1} />
           <Bloom intensity={dark ? 0.8 : 0.35} luminanceThreshold={0.82} mipmapBlur />

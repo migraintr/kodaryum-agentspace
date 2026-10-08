@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
 import { books, screenTex } from './textures.js'
+import { DESK_GEO as G, EXEC_GEO } from './plan.js'
 
 export const MAT = {
   deskTop: new THREE.MeshStandardMaterial({ color: '#f1f0ec', roughness: 0.45 }),
@@ -32,8 +33,9 @@ function Screen({ kind, n, w, h, ...p }) {
   )
 }
 
-/** Çalışma masası: beyaz tabla, metal ayak, çekmece, çift monitör (yazılım) ya da tek geniş ekran (tasarım) */
-export function Desk({ screen = 'code', n = 0, dual = true, ...p }) {
+/** Çalışma masası: beyaz tabla, metal ayak, çekmece, çift monitör (yazılım) ya da tek geniş ekran (tasarım).
+ *  mouse=false: fareyi oturan çalışan kendisi taşır (elle birlikte hareket eder), masada sabit fare çizilmez. */
+export function Desk({ screen = 'code', n = 0, dual = true, mouse = true, ...p }) {
   return (
     <group {...p}>
       <RoundedBox args={[1.5, 0.035, 0.75]} radius={0.008} position={[0, 0.74, 0]} material={MAT.deskTop} castShadow receiveShadow />
@@ -51,12 +53,9 @@ export function Desk({ screen = 'code', n = 0, dual = true, ...p }) {
         <boxGeometry args={[0.4, 0.58, 0.55]} />
       </mesh>
       {dual ? (
-        <>
-          <Screen kind={screen} n={n} w={0.52} h={0.3} position={[-0.27, 1.02, -0.22]} rotation-y={0.12} />
-          <Screen kind={screen} n={n + 1} w={0.52} h={0.3} position={[0.27, 1.02, -0.22]} rotation-y={-0.12} />
-        </>
+        G.dual.map(([x, y, z, ry], i) => <Screen key={i} kind={screen} n={n + i} w={G.screen.dual[0]} h={G.screen.dual[1]} position={[x, y, z]} rotation-y={ry} />)
       ) : (
-        <Screen kind={screen} n={n} w={0.66} h={0.38} position={[0, 1.07, -0.22]} />
+        <Screen kind={screen} n={n} w={G.screen.single[0]} h={G.screen.single[1]} position={G.single.slice(0, 3)} />
       )}
       <mesh position={[0, 0.84, -0.24]} material={MAT.steel}>
         <boxGeometry args={[0.04, 0.2, 0.03]} />
@@ -64,8 +63,27 @@ export function Desk({ screen = 'code', n = 0, dual = true, ...p }) {
       <mesh position={[0, 0.761, -0.24]} material={MAT.steel}>
         <boxGeometry args={[0.24, 0.012, 0.16]} />
       </mesh>
-      <RoundedBox args={[0.42, 0.016, 0.13]} radius={0.005} position={[0, 0.765, 0.1]} material={MAT.white} castShadow />
-      <RoundedBox args={[0.06, 0.022, 0.1]} radius={0.01} position={[0.32, 0.765, 0.1]} material={MAT.white} />
+      <Keyboard position={G.kb} />
+      {mouse && <RoundedBox args={[0.06, 0.022, 0.1]} radius={0.01} position={G.mouse} material={MAT.white} castShadow />}
+    </group>
+  )
+}
+
+// Klavye: beyaz gövde + tuş sıraları (rakam · üst · orta · alt) ve boşluk tuşu. Orta sıra gövde merkezinde;
+// sıra aralığı 19 mm (çalışan animasyonu parmakları bu sıralara göre vurdurur).
+const KEYCAP = new THREE.MeshStandardMaterial({ color: '#d9dce1', roughness: 0.55 })
+export function Keyboard(p) {
+  return (
+    <group {...p}>
+      <RoundedBox args={[0.42, 0.016, 0.13]} radius={0.005} material={MAT.white} castShadow receiveShadow />
+      {[-0.038, -0.019, 0, 0.019].map((z) => (
+        <mesh key={z} position={[0, 0.009, z]} material={KEYCAP}>
+          <boxGeometry args={[0.36, 0.004, 0.015]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.009, 0.038]} material={KEYCAP}>
+        <boxGeometry args={[0.13, 0.004, 0.015]} />
+      </mesh>
     </group>
   )
 }
@@ -235,15 +253,7 @@ export function ExecDesk(p) {
         <boxGeometry args={[1.8, 0.5, 0.01]} />
         <meshStandardMaterial color="#4a5164" roughness={0.4} />
       </mesh>
-      {/* dizüstü */}
-      <group position={[0, 0.79, 0.05]}>
-        <mesh material={new THREE.MeshStandardMaterial({ color: '#c9ccd2', metalness: 0.8, roughness: 0.3 })}>
-          <boxGeometry args={[0.34, 0.012, 0.24]} />
-        </mesh>
-        <mesh position={[0, 0.12, -0.12]} rotation-x={0.25} material={new THREE.MeshStandardMaterial({ color: '#c9ccd2', metalness: 0.8, roughness: 0.3 })}>
-          <boxGeometry args={[0.34, 0.24, 0.01]} />
-        </mesh>
-      </group>
+      <Laptop />
       {/* masa lambası */}
       <group position={[-0.85, 0.79, -0.15]}>
         <mesh material={MAT.black}>
@@ -258,6 +268,35 @@ export function ExecDesk(p) {
         <pointLight position={[0.14, 0.32, 0]} color="#ffd9a8" intensity={0.5} distance={1.5} />
       </group>
       <Plant size={0.35} position={[0.8, 0.79, -0.2]} />
+    </group>
+  )
+}
+
+// CEO'nun dizüstü bilgisayarı: alüminyum gövde, klavye alanı, dokunmatik yüzey, geriye yatık kapakta şirket ekranı
+const ALU = new THREE.MeshStandardMaterial({ color: '#c9ccd2', metalness: 0.8, roughness: 0.3 })
+function Laptop() {
+  const [x, y, z] = EXEC_GEO.laptop
+  const hz = EXEC_GEO.hinge - z // menteşe, taban merkezine göre
+  return (
+    <group position={[x, y, z]}>
+      <mesh material={ALU} castShadow receiveShadow>
+        <boxGeometry args={[0.34, 0.012, 0.24]} />
+      </mesh>
+      <mesh position={[0, 0.0065, hz + 0.075]} material={MAT.black}>
+        <boxGeometry args={[0.3, 0.002, 0.11]} />
+      </mesh>
+      <mesh position={[0, 0.0065, hz + 0.19]} material={MAT.steel}>
+        <boxGeometry args={[0.11, 0.0015, 0.07]} />
+      </mesh>
+      <group position={[0, 0.006, hz]} rotation-x={EXEC_GEO.lid}>
+        <mesh position={[0, 0.115, -0.004]} material={ALU} castShadow>
+          <boxGeometry args={[0.34, 0.23, 0.008]} />
+        </mesh>
+        <mesh position={[0, 0.118, 0.0005]}>
+          <planeGeometry args={[0.31, 0.2]} />
+          <meshBasicMaterial map={screenTex('company', 0)} toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   )
 }

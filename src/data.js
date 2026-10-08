@@ -84,7 +84,7 @@ export const PEOPLE = [
   { id: 'deniz', name: 'Cem', surname: 'Koç', role: 'Veri Analisti', label: 'Veri', dept: 'arastirma', model: 'Gemini' },
   { id: 'ipek', name: 'Büşra', surname: 'Kurt', role: 'AI Araştırmacı', label: 'Okuyor', dept: 'arastirma', model: 'Claude Opus', long: true },
   { id: 'oren', name: 'Murat', surname: 'Özdemir', role: 'Otomasyon Uzmanı', label: 'Otomasyon', dept: 'operasyon', model: 'GPT' },
-  { id: 'tolga', name: 'Serkan', surname: 'Polat', role: 'Sistem İzleme Uzmanı', label: 'İzliyor', dept: 'operasyon', model: 'Gemini' },
+  { id: 'tolga', name: 'Serkan', surname: 'Polat', role: 'Operasyon Denetçisi', label: 'Denetimde', dept: 'operasyon', model: 'Gemini' },
   { id: 'selin', name: 'Elif', surname: 'Şimşek', role: 'Muhasebe Müdürü', label: 'Muhasebe', dept: 'muhasebe', model: 'Claude Sonnet', long: true },
   { id: 'burak', name: 'Okan', surname: 'Yavuz', role: 'Mali Analist', label: 'Analiz', dept: 'muhasebe', model: 'GPT' },
   { id: 'ece', name: 'Gamze', surname: 'Erdoğan', role: 'Bordro ve Fatura Uzmanı', label: 'Fatura', dept: 'muhasebe', model: 'Gemini', long: true },

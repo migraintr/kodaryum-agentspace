@@ -213,6 +213,7 @@ export const useStore = create((set, get) => ({
   hoveredRoom: null,
   camMoved: false, // kullanıcı kamerayı ilk görünümden uzaklaştırdı mı
   camReset: 0, // artınca kamera ilk görünüme döner
+  camAz: 0, // kameranın kat çevresindeki yönü (derece, 0 = önden); oda tabelaları buna göre köşe değiştirir
 
   messages: CHAT_HISTORY,
   typing: false,
@@ -256,6 +257,7 @@ export const useStore = create((set, get) => ({
   setCamMoved: (camMoved) => get().camMoved !== camMoved && set({ camMoved }),
   // Genel görünüm: oda seçimini bırak, kamerayı açılış görünümüne döndür
   resetView: () => set((s) => ({ roomId: null, selectedId: null, camMoved: false, camReset: s.camReset + 1 })),
+  setCamAz: (camAz) => get().camAz !== camAz && set({ camAz }),
   hoverRoom: (id) => get().hoveredRoom !== id && set({ hoveredRoom: id }),
 
   openChat: () => set({ chatOpen: true, unread: 0 }),
@@ -263,10 +265,15 @@ export const useStore = create((set, get) => ({
   askAda: (text) => set({ chatOpen: true, unread: 0, chatDraft: text }),
   staffOpen: false, // üst bardaki "Çalışan" penceresi
   setStaffOpen: (staffOpen) => set({ staffOpen }),
+  clockOpen: false, // üst bardaki saat → Takvim ve Saat penceresi
+  setClockOpen: (clockOpen) => set({ clockOpen }),
   closeChat: () => set({ chatOpen: false }),
   toggleChat: () => set((s) => ({ chatOpen: !s.chatOpen, unread: 0 })),
   toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
   closeNav: () => set({ navOpen: false }),
+
+  // Dışarıdan (ör. ofisteki denetçi senaryosu) sohbete mesaj düşmek için
+  post: (from, text, extra) => set((s) => ({ messages: [...s.messages, message(from, text, extra)], unread: s.chatOpen ? 0 : s.unread + 1 })),
 
   notify: (text, tone = 'info') => {
     const id = Date.now()

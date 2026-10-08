@@ -215,3 +215,48 @@ export function roll(bone, ref, want, root, blend = 1) {
   bone.quaternion.premultiply(p.clone().invert().multiply(_q).multiply(p))
   bone.updateMatrixWorld(true)
 }
+
+/** Kemiği, ilk çocuğuna doğru olan yönü DÜNYA uzayında `want` yönüne bakacak şekilde çevirir (bacak IK'sı için) */
+const _e = new THREE.Vector3()
+export function aimWorld(bone, want, blend = 1) {
+  const child = bone && childOf(bone)
+  if (!child) return
+  bone.getWorldPosition(_a)
+  child.getWorldPosition(_b)
+  const cur = _b.sub(_a).normalize()
+  _q.setFromUnitVectors(cur, _e.copy(want).normalize())
+  if (blend < 1) _q.slerp(new THREE.Quaternion(), 1 - blend)
+  bone.parent.getWorldQuaternion(_w)
+  const p = _w.clone()
+  bone.quaternion.premultiply(p.clone().invert().multiply(_q).multiply(p))
+  bone.updateMatrixWorld(true)
+}
+
+/**
+ * Eli kendi ekseni etrafında çevirip AVUCU karakter uzayındaki `want` yönüne baktırır. Avuç normali parmak
+ * köklerinden hesaplanır (işaret × serçe), modelin başparmak yerleşiminden bağımsızdır. s: sol el +1, sağ el −1.
+ */
+const _i = new THREE.Vector3()
+const _p = new THREE.Vector3()
+const _n2 = new THREE.Vector3()
+export function rollPalm(hand, index, pinky, want, root, s, blend = 1) {
+  const child = hand && childOf(hand)
+  if (!child || !index || !pinky) return
+  hand.getWorldPosition(_a)
+  child.getWorldPosition(_b)
+  const axis = _b.sub(_a).normalize()
+  index.getWorldPosition(_i).sub(_a)
+  pinky.getWorldPosition(_p).sub(_a)
+  _n2.crossVectors(_i, _p).multiplyScalar(-s) // avuç tarafı
+  _n2.addScaledVector(axis, -_n2.dot(axis)).normalize()
+  root.getWorldQuaternion(_w)
+  _d.copy(want).applyQuaternion(_w)
+  _d.addScaledVector(axis, -_d.dot(axis)).normalize()
+  let ang = Math.acos(Math.min(1, Math.max(-1, _n2.dot(_d))))
+  if (_c.crossVectors(_n2, _d).dot(axis) < 0) ang = -ang
+  _q.setFromAxisAngle(axis, ang * blend)
+  hand.parent.getWorldQuaternion(_w)
+  const p = _w.clone()
+  hand.quaternion.premultiply(p.clone().invert().multiply(_q).multiply(p))
+  hand.updateMatrixWorld(true)
+}
