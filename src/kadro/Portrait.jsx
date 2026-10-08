@@ -12,10 +12,12 @@ import { createDeskProps } from '../hq/deskProps.js'
 import { Chair, Desk } from '../hq/furniture.jsx'
 import { DESKS, SEAT_TO_DESK } from '../hq/plan.js'
 import Character from './Character.jsx'
+import { CEO_LOOK } from './looks.js'
+const Q0 = new URLSearchParams(location.search)
 import { createWork, deskKit } from './work.js'
 
 const LOOKS = [
-  { model: 'man', suit: '#24282f', vest: '#30353d', hair: '#1a1410', shoes: '#16171a' },
+  Q0.has('ceo') ? CEO_LOOK : { model: 'man', suit: '#24282f', vest: '#30353d', hair: '#1a1410', shoes: '#16171a' },
   { model: 'woman', shoes: '#141416' },
   { model: 'man', suit: '#1c2740', vest: '#26355a', hair: '#2b1d14', shoes: '#16171a' },
   { model: 'man', suit: '#3d424b', vest: '#2c3038', hair: '#0f0f10', shoes: '#16171a' },

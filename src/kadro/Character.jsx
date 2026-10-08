@@ -69,6 +69,60 @@ function dye(mat, color, strength = 1) {
 }
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z)
+
+// CEO aksesuarları: altın kol saati, yaka iğnesi, mendil, manşet düğmeleri, yelek zinciri. Konumlar karakter uzayında
+// (metre; +z öne, +x karakterin soluna, +y yukarı) verilir ve bağlama pozunda kemiğin yerel uzayına çevrilir.
+const GOLD = new THREE.MeshStandardMaterial({ color: '#d9b04a', roughness: 0.22, metalness: 1, envMapIntensity: 1.6 })
+const SILK = new THREE.MeshStandardMaterial({ color: '#f4efe2', roughness: 0.4, metalness: 0.05 })
+const DIAL = new THREE.MeshStandardMaterial({ color: '#10131a', roughness: 0.25, metalness: 0.4 })
+function addCeoGear(model, bones) {
+  model.updateMatrixWorld(true)
+  const mq = new THREE.Quaternion()
+  model.getWorldQuaternion(mq)
+  const put = (bone, mesh, p, q) => {
+    if (!bone) return
+    const w = model.localToWorld(p.clone())
+    bone.parent && bone.updateWorldMatrix(true, false)
+    const bq = bone.getWorldQuaternion(new THREE.Quaternion())
+    const ws = bone.getWorldScale(new THREE.Vector3())
+    mesh.position.copy(bone.worldToLocal(w))
+    mesh.quaternion.copy(bq.invert().multiply(mq.clone().multiply(q ?? new THREE.Quaternion())))
+    mesh.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z)
+    mesh.traverse((o) => o.isMesh && ((o.castShadow = true), (o.userData.ceoGear = true)))
+    bone.add(mesh)
+  }
+  const mk = (geo, mat) => new THREE.Mesh(geo, mat)
+  const grp = (...c) => {
+    const g = new THREE.Group()
+    g.add(...c)
+    return g
+  }
+  // yaka iğnesi (sağ yaka; sol yakada ofis modelinin gül iğnesi var) ve ondan sol yelek cebine inen altın zincir
+  put(bones.Spine2, mk(new THREE.SphereGeometry(0.0085, 14, 10), GOLD), V(-0.072, 1.388, 0.122))
+  const chain = new THREE.CatmullRomCurve3([V(-0.072, 1.388, 0.126), V(-0.03, 1.27, 0.152), V(0.02, 1.215, 0.158), V(0.085, 1.235, 0.148)])
+  put(bones.Spine2, mk(new THREE.TubeGeometry(chain, 24, 0.0028, 6, false), GOLD), new THREE.Vector3(0, 0, 0))
+  put(bones.Spine2, mk(new THREE.SphereGeometry(0.007, 10, 8), GOLD), V(0.088, 1.232, 0.146))
+  // sol bilek: altın kasalı kol saati + manşet düğmesi
+  const watch = grp(mk(new THREE.TorusGeometry(0.0345, 0.006, 10, 28), GOLD), mk(new THREE.CylinderGeometry(0.019, 0.019, 0.005, 24), DIAL))
+  watch.children[1].position.set(0, 0.03, 0)
+  watch.children[1].rotation.x = 0
+  const lf = bones.LeftForeArm
+  if (lf) {
+    // kol ekseni boyunca bilek yakını: önkol kemiğinin %86'sı
+    const h = bones.LeftHand
+    const a = lf.getWorldPosition(new THREE.Vector3())
+    const bpos = h ? h.getWorldPosition(new THREE.Vector3()) : a.clone().add(new THREE.Vector3(0, -0.25, 0))
+    const wp = a.clone().lerp(bpos, 0.86)
+    const dir = bpos.clone().sub(a).normalize()
+    const qd = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir) // halka ekseni (Y) → kol ekseni
+    const ws = lf.getWorldScale(new THREE.Vector3())
+    watch.position.copy(lf.worldToLocal(wp.clone()))
+    watch.quaternion.copy(lf.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(qd).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0))))
+    watch.scale.set(1 / ws.x, 1 / ws.y, 1 / ws.z)
+    watch.traverse((o) => o.isMesh && (o.castShadow = true))
+    lf.add(watch)
+  }
+}
 export const SEAT_H = 0.5 // sandalye oturak yüksekliği (m)
 
 // Hareket türleri: ayakta/yürüyüş prosedürel (gait.js), oturma prosedürel, diğerleri (agree/no) animasyon klibi
@@ -110,6 +164,26 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       }
       o.material.envMapIntensity = 0.9
     })
+    if (look.ceo) {
+      // CEO: ipek parlaklığında kumaş, aynalı ayakkabı + altın aksesuarlar
+      model.traverse((o) => {
+        if (!o.isMesh || o.userData.ceoGear) return
+        const n = o.material.name
+        if (n === 'Wolf3D_Outfit_Top' || n === 'Wolf3D_Outfit_Bottom') {
+          o.material.roughness = 0.58
+          o.material.metalness = 0.04
+          o.material.envMapIntensity = 1.1
+        } else if (/Footwear|shoes/i.test(n)) {
+          o.material.roughness = 0.2
+          o.material.metalness = 0.3
+          o.material.envMapIntensity = 1.5
+        }
+      })
+      if (!model.userData.ceoGear) {
+        model.userData.ceoGear = true
+        addCeoGear(model, bones.current)
+      }
+    }
     // Göz kırpma morfları (varsa): eyeBlinkLeft/Right ya da eyesClosed
     blinkTargets.current = []
     model.traverse((o) => {

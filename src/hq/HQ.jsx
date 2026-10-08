@@ -5,13 +5,15 @@
 // arkasına geçince o duvarlar alçalır (cutaway.jsx).
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Html, OrbitControls, RoundedBox } from '@react-three/drei'
+import { Environment, Html, OrbitControls, PerformanceMonitor, RoundedBox } from '@react-three/drei'
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
 import lobby from '@pmndrs/assets/hdri/lobby.exr'
 import { DEPT_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
+import { LEVELS, useQuality } from '../quality.js'
+import { StaticBatch } from './batch.jsx'
 import { ICONS, alpha } from '../ui/kit.jsx'
 import { Bookshelf, Cabinet, Chair, CoffeeTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
 import { greenery, moodboard, rugTex, stickyBoard, terrazzo, whiteboard } from './textures.js'
@@ -492,27 +494,55 @@ function SceneReady() {
   return null
 }
 
+// Otomatik kalite: kare hızı düşerse bir kademe iner (gölge/efekt/çözünürlük), akıcılaşırsa geri çıkar.
+// Gölge haritası ışık sabit olduğu için yalnızca hareketli çalışanlar yüzünden yenilenir: her N karede bir.
+function Quality() {
+  const gl = useThree((s) => s.gl)
+  const three = useThree()
+  if (import.meta.env.DEV) window.__three = three
+  const { down, up } = useQuality.getState()
+  const level = useQuality((s) => s.level)
+  const n = useRef(0)
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false
+    gl.shadowMap.needsUpdate = true
+  }, [gl, level])
+  useFrame(() => {
+    if (++n.current >= LEVELS[useQuality.getState().level].shadowEvery) {
+      n.current = 0
+      gl.shadowMap.needsUpdate = true
+    }
+  }, -1)
+  const onDecline = () => {
+    down()
+    const l = useQuality.getState().level
+    useStore.getState().notify(`Takılma algılandı — grafik kalitesi: ${LEVELS[l].name}`, 'info')
+  }
+  return <PerformanceMonitor bounds={(hz) => (hz > 90 ? [50, 100] : [38, 58])} flipflops={3} onDecline={onDecline} onIncline={up} onFallback={down} />
+}
+
 export default function HQ() {
   const dark = useStore((s) => s.theme === 'dark')
+  const q = LEVELS[useQuality((s) => s.level)]
   return (
     <div className="absolute inset-0">
-      <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
+      <Canvas shadows dpr={q.dpr} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false, powerPreference: 'high-performance' }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
         <color attach="background" args={[dark ? '#0d1117' : '#eef0f2']} />
         <Suspense fallback={null}>
           <Environment files={lobby} environmentIntensity={dark ? 0.25 : 0.75} />
           <hemisphereLight args={['#eef4ff', '#b9bcc2', dark ? 0.15 : 0.45]} />
-          <directionalLight position={[-12, 22, 14]} intensity={dark ? 0.4 : 2.3} color="#ffffff" castShadow shadow-mapSize={[4096, 4096]} shadow-bias={-0.0002} shadow-normalBias={0.025}>
+          <directionalLight key={q.shadowMap} position={[-12, 22, 14]} intensity={dark ? 0.4 : 2.3} color="#ffffff" castShadow shadow-mapSize={[q.shadowMap, q.shadowMap]} shadow-bias={-0.0002} shadow-normalBias={0.025}>
             <orthographicCamera attach="shadow-camera" args={[-18, 18, 12, -12, 1, 60]} />
           </directionalLight>
-          <Shell />
-          <Software />
-          <CeoOffice />
-          <Design />
-          <Marketing />
-          <Research />
-          <Accounting />
-          <Operations />
-          <Partitions />
+          <StaticBatch label="Shell"><Shell /></StaticBatch>
+          <StaticBatch label="Software"><Software /></StaticBatch>
+          <StaticBatch label="CeoOffice"><CeoOffice /></StaticBatch>
+          <StaticBatch label="Design"><Design /></StaticBatch>
+          <StaticBatch label="Marketing"><Marketing /></StaticBatch>
+          <StaticBatch label="Research"><Research /></StaticBatch>
+          <StaticBatch label="Accounting"><Accounting /></StaticBatch>
+          <StaticBatch label="Operations"><Operations /></StaticBatch>
+          <StaticBatch label="Partitions"><Partitions /></StaticBatch>
           <RoomZones />
           <Agents />
           <SceneReady />
@@ -521,12 +551,15 @@ export default function HQ() {
         <OrbitControls makeDefault target={HOME.target.toArray()} enableDamping dampingFactor={0.08} rotateSpeed={0.7} screenSpacePanning={false} {...LIMITS} />
         <CameraRig />
         <CutawayDriver />
-        <EffectComposer multisampling={0}>
-          <N8AO aoRadius={0.6} intensity={1.6} distanceFalloff={1} />
-          <Bloom intensity={dark ? 0.8 : 0.35} luminanceThreshold={0.82} mipmapBlur />
-          <ToneMapping mode={ToneMappingMode.NEUTRAL} />
-          <SMAA />
-        </EffectComposer>
+        <Quality />
+        {q.post && (
+          <EffectComposer multisampling={0}>
+            {q.ao && <N8AO aoRadius={0.6} intensity={1.6} distanceFalloff={1} />}
+            {q.bloom && <Bloom intensity={dark ? 0.8 : 0.35} luminanceThreshold={0.82} mipmapBlur />}
+            <ToneMapping mode={ToneMappingMode.NEUTRAL} />
+            {q.smaa && <SMAA />}
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   )
