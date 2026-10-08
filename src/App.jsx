@@ -27,16 +27,24 @@ function SceneLoading() {
   )
 }
 
-// Odaya odaklanınca ofisin sağ üstünde "Genel görünüm"
+// Kamera ilk görünümden ayrılınca (odaya odaklanma, çevirme, yakınlaştırma) sağ üstte "Genel görünüm"
 function OfficeControls() {
-  const roomId = useStore((s) => s.roomId)
-  const focusRoom = useStore((s) => s.focusRoom)
-  const btn = 'pointer-events-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-white/20 bg-[#0d2659]/70 px-3.5 text-[12.5px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#0d2659]/95'
+  const show = useStore((s) => !!s.roomId || s.camMoved)
+  const resetView = useStore((s) => s.resetView)
   return (
-    <div className="pointer-events-none absolute top-3 right-3 z-20 flex gap-2">
+    <div className="pointer-events-none absolute top-3 right-3 z-20">
       <AnimatePresence>
-        {roomId && (
-          <motion.button initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} type="button" onClick={() => focusRoom(null)} className={btn}>
+        {show && (
+          <motion.button
+            initial={{ opacity: 0, y: -6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+            transition={{ duration: 0.18 }}
+            type="button"
+            onClick={resetView}
+            title="İlk görünüme dön (ESC)"
+            className="pointer-events-auto flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-white/20 bg-[#0d2659]/80 px-3.5 text-[12.5px] font-semibold text-white shadow-lg backdrop-blur-md hover:bg-[#0d2659]/95"
+          >
             <Maximize2 size={14} /> Genel görünüm
           </motion.button>
         )}
@@ -88,7 +96,7 @@ export default function App() {
       if (s.chatOpen) s.closeChat()
       else if (s.navOpen) s.closeNav()
       else if (s.view !== 'genel') s.setView('genel')
-      else s.focusRoom(null)
+      else s.resetView()
     }
     window.addEventListener('keydown', onKey)
     return () => {

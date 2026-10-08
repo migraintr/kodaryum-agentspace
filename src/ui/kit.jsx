@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Code, Crown, FlaskConical, Handshake, Headphones, Landmark, Megaphone, Palette, TrendingUp, Users, Workflow,
+  Calculator, Code, Crown, FlaskConical, Handshake, Headphones, Landmark, Megaphone, Palette, TrendingUp, Users, Workflow,
 } from 'lucide-react'
 
-export const ICONS = { Code, Crown, FlaskConical, Handshake, Headphones, Landmark, Megaphone, Palette, TrendingUp, Users, Workflow }
+export const ICONS = { Calculator, Code, Crown, FlaskConical, Handshake, Headphones, Landmark, Megaphone, Palette, TrendingUp, Users, Workflow }
 
 export const clock = (iso) => new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 export const alpha = (hex, a) => `${hex}${Math.round(a * 255).toString(16).padStart(2, '0')}`

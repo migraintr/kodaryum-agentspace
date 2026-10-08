@@ -190,16 +190,6 @@ export const greenery = () =>
     g.globalAlpha = 1
   }, { repeat: [1, 1] })
 
-export const slats = () =>
-  make('slats', 256, 256, (g, w, h) => {
-    g.fillStyle = '#7a5434'
-    g.fillRect(0, 0, w, h)
-    for (let x = 0; x < w; x += 16) {
-      g.fillStyle = '#c99a63'
-      g.fillRect(x, 0, 11, h)
-    }
-  })
-
 export const books = () =>
   make('books', 256, 256, (g, w, h) => {
     g.fillStyle = '#2b2b2f'

@@ -25,7 +25,7 @@ export const DEPARTMENTS = [
   { id: 'tasarim', name: 'Tasarım', short: 'Tasarım', icon: 'Palette', color: '#e8459a', board: 'tasarim', col: 3, row: 0, screen: 'palette' },
   { id: 'pazarlama', name: 'Pazarlama', short: 'Pazarlama', icon: 'Megaphone', color: '#f59e1b', board: 'pazarlama', col: 0, row: 1, screen: 'kanban' },
   { id: 'arastirma', name: 'Araştırma', short: 'Araştırma', icon: 'FlaskConical', color: '#7a4fe0', board: 'arastirma', col: 1, row: 1, screen: 'neural' },
-  { id: 'toplanti', name: 'Toplantı Odası', short: 'Toplantı', icon: 'Users', color: '#f5a524', board: null, col: 2, row: 1, screen: 'logo' },
+  { id: 'muhasebe', name: 'Muhasebe', short: 'Muhasebe', icon: 'Calculator', color: '#c08a1e', board: 'muhasebe', col: 2, row: 1, screen: 'finance' },
   { id: 'operasyon', name: 'Operasyon', short: 'Operasyon', icon: 'Workflow', color: '#17a673', board: 'operasyon', col: 3, row: 1, screen: 'ops' },
 ]
 
@@ -53,8 +53,13 @@ export const BOARDS = [
   },
   {
     id: 'operasyon', name: 'Operasyon', short: 'Operasyon', color: '#17a673', icon: 'Workflow', chair: { name: 'ÖREN', task: 'Süreç otomasyonu' },
-    keywords: ['operasyon', 'süreç', 'otomasyon', 'izleme', 'sunucu', 'altyapı', 'finans', 'bütçe', 'fatura', 'lojistik', 'destek'],
+    keywords: ['operasyon', 'süreç', 'otomasyon', 'izleme', 'sunucu', 'altyapı', 'lojistik', 'destek'],
     metrics: { efficiency: 96.2, load: 57, tokens: 0.19 },
+  },
+  {
+    id: 'muhasebe', name: 'Muhasebe', short: 'Muhasebe', color: '#c08a1e', icon: 'Calculator', chair: { name: 'SELİN', task: 'Çeyrek dönem bütçe kapanışı' },
+    keywords: ['muhasebe', 'finans', 'bütçe', 'butce', 'fatura', 'maliyet', 'gelir', 'gider', 'vergi', 'bordro', 'maaş', 'ödeme', 'tahsilat', 'komisyon', 'nakit', 'bilanço', 'kâr', 'kar', 'fiyat'],
+    metrics: { efficiency: 94.6, load: 61, tokens: 0.14 },
   },
 ]
 
@@ -79,6 +84,9 @@ export const PEOPLE = [
   { id: 'ipek', name: 'İpek', role: 'AI Araştırmacı', label: 'Okuyor', dept: 'arastirma', model: 'Claude Opus', long: true },
   { id: 'oren', name: 'Ören', role: 'Otomasyon Uzmanı', label: 'Otomasyon', dept: 'operasyon', model: 'GPT' },
   { id: 'tolga', name: 'Tolga', role: 'Sistem İzleme Uzmanı', label: 'İzliyor', dept: 'operasyon', model: 'Gemini' },
+  { id: 'selin', name: 'Selin', role: 'Muhasebe Müdürü', label: 'Muhasebe', dept: 'muhasebe', model: 'Claude Sonnet', long: true },
+  { id: 'burak', name: 'Burak', role: 'Mali Analist', label: 'Analiz', dept: 'muhasebe', model: 'GPT' },
+  { id: 'ece', name: 'Ece', role: 'Bordro ve Fatura Uzmanı', label: 'Fatura', dept: 'muhasebe', model: 'Gemini', long: true },
 ]
 
 // Görevler: ADA'nın kurucu hedefinden çıkardığı iş kalemleri. status: pending (onay bekliyor) | active | done

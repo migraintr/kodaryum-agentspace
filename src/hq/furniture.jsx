@@ -1,5 +1,5 @@
 // Mobilyalar (gerçek ölçülerde, metre): çalışma masası + çift monitör, ofis sandalyesi, sunucu dolabı,
-// saksı bitkileri, berjer, sehpa, kitaplık, toplantı masası, duvar ekranı, dolap
+// saksı bitkileri, berjer, sehpa, kitaplık, duvar ekranı, dolap
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
@@ -258,26 +258,6 @@ export function ExecDesk(p) {
         <pointLight position={[0.14, 0.32, 0]} color="#ffd9a8" intensity={0.5} distance={1.5} />
       </group>
       <Plant size={0.35} position={[0.8, 0.79, -0.2]} />
-    </group>
-  )
-}
-
-export function ConferenceTable({ seats = 8, ...p }) {
-  const per = seats / 2
-  return (
-    <group {...p}>
-      <RoundedBox args={[1.25, 0.05, 3.2]} radius={0.02} position={[0, 0.75, 0]} material={MAT.white} castShadow receiveShadow />
-      {[-1.1, 1.1].map((z) => (
-        <mesh key={z} position={[0, 0.37, z]} material={MAT.steel} castShadow>
-          <boxGeometry args={[0.7, 0.72, 0.06]} />
-        </mesh>
-      ))}
-      {Array.from({ length: per }, (_, i) => -1.2 + (i * 2.4) / (per - 1)).flatMap((z) =>
-        // Sandalye yerel −z yönüne bakar (sırtlık +z); masaya dönmesi için sağdakiler +90°, soldakiler −90°
-        [-1, 1].map((s) => <Chair key={`${z}${s}`} position={[s * 0.85, 0, z]} rotation-y={(s * Math.PI) / 2} />),
-      )}
-      <Chair position={[0, 0, 2.0]} rotation-y={0} />
-      <Plant size={0.32} position={[0, 0.775, 0]} />
     </group>
   )
 }

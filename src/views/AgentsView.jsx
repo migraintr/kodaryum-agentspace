@@ -1,4 +1,4 @@
-// AI Çalışanlar: 26 ajan departmanlarına göre; durum, bağlı kurul ve proje yükü. Buradan ajan
+// AI Çalışanlar: tüm ajanlar departmanlarına göre; durum, bağlı kurul ve proje yükü. Buradan ajan
 // 3D ofiste gösterilir ya da ekibine CEO üzerinden görev verilir.
 import { useMemo, useState } from 'react'
 import { Bot, MapPin, Send } from 'lucide-react'
@@ -10,7 +10,7 @@ import { workload } from './team.js'
 
 const STATES = [
   { label: 'Çalışıyor', color: '#10b981' },
-  { label: 'Toplantıda', color: '#f59e0b' },
+  { label: 'Planlamada', color: '#f59e0b' },
   { label: 'Kod incelemede', color: '#0ea5e9' },
   { label: 'Müsait', color: '#8b5cf6' },
 ]

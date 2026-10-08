@@ -1,6 +1,6 @@
 // Kodaryum HQ — referans izometrik ofis katının 3B modeli (sıfırdan).
 // Kat: 30 × 17 m. Arka sıra: Yazılım · CEO Ofisi · Tasarım; geniş koridor; ön sıra: Pazarlama · Araştırma ·
-// Toplantı · Operasyon. Her odada renkli vurgu duvarı + aynı tonda halı; cam bölmeler siyah çerçeveli.
+// Muhasebe · Operasyon. Her odada renkli vurgu duvarı + aynı tonda halı; cam bölmeler siyah çerçeveli.
 // Odaya tıklayınca kamera o odaya süzülür (store.roomId).
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
@@ -12,8 +12,8 @@ import lobby from '@pmndrs/assets/hdri/lobby.exr'
 import { DEPT_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { ICONS, alpha } from '../ui/kit.jsx'
-import { Bookshelf, Cabinet, Chair, CoffeeTable, ConferenceTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
-import { greenery, moodboard, rugTex, slats, stickyBoard, terrazzo } from './textures.js'
+import { Bookshelf, Cabinet, Chair, CoffeeTable, Desk, ExecDesk, LoungeChair, MAT, Plant, Rack, WallTV } from './furniture.jsx'
+import { greenery, moodboard, rugTex, stickyBoard, terrazzo } from './textures.js'
 import Agents from './Agents.jsx'
 import { BACK, C, CEO_DESK, CEO_SEAT, CHAIR_GAP, DESKS, FRONT, H, ROOMS, W } from './plan.js'
 
@@ -56,9 +56,46 @@ function Glass({ axis, from, to, at, h = H - 0.2, mullion = 1.4 }) {
 }
 
 // Vurgu duvarı (odanın arkasında, koridora/kameraya bakan yüz)
-function AccentWall({ x, z, color, h = H, face = 1 }) {
+// Vurgu duvarı. door: [x0, x1] verilirse duvarda kapı boşluğu + kasalı, aralık duran cam kapı (odaya doğru açılır)
+const DOOR_H = 2.15
+function AccentWall({ x, z, color, h = H, face = 1, door }) {
   const m = useMemo(() => new THREE.MeshStandardMaterial({ color, roughness: 0.85 }), [color])
-  return box([x[1] - x[0], h, 0.12], [(x[0] + x[1]) / 2, h / 2, z + face * 0.06], m)
+  const zc = z + face * 0.06
+  if (!door) return box([x[1] - x[0], h, 0.12], [(x[0] + x[1]) / 2, h / 2, zc], m)
+  const [d0, d1] = door
+  const seg = (a, b) => b - a > 0.01 && box([b - a, h, 0.12], [(a + b) / 2, h / 2, zc], m)
+  return (
+    <group>
+      {seg(x[0], d0)}
+      {seg(d1, x[1])}
+      {box([d1 - d0, h - DOOR_H, 0.12], [(d0 + d1) / 2, (h + DOOR_H) / 2, zc], m)}
+      <Door x0={d0} x1={d1} z={zc} face={face} />
+    </group>
+  )
+}
+
+// Kapı: siyah kasa (iki dikme + üst kayıt), eşik, menteşeden ~65° açık cam kanat ve dikey kol
+function Door({ x0, x1, z, face = 1, open = 1.15 }) {
+  const w = x1 - x0
+  return (
+    <group>
+      {box([0.06, DOOR_H, 0.16], [x0 + 0.03, DOOR_H / 2, z], frameMat)}
+      {box([0.06, DOOR_H, 0.16], [x1 - 0.03, DOOR_H / 2, z], frameMat)}
+      {box([w, 0.06, 0.16], [(x0 + x1) / 2, DOOR_H - 0.03, z], frameMat)}
+      {box([w, 0.012, 0.18], [(x0 + x1) / 2, 0.006, z], frameMat, false)}
+      {/* kanat: menteşe x0'da; odaya (face yönüne) doğru açılır */}
+      <group position={[x0 + 0.06, 0, z]} rotation-y={-face * open}>
+        <mesh position={[(w - 0.12) / 2, DOOR_H / 2 - 0.02, 0]} material={glassMat}>
+          <boxGeometry args={[w - 0.12, DOOR_H - 0.1, 0.02]} />
+        </mesh>
+        {box([w - 0.12, 0.05, 0.04], [(w - 0.12) / 2, DOOR_H - 0.09, 0], frameMat, false)}
+        {box([w - 0.12, 0.08, 0.04], [(w - 0.12) / 2, 0.06, 0], frameMat, false)}
+        {box([0.04, DOOR_H - 0.1, 0.04], [0.02, DOOR_H / 2 - 0.02, 0], frameMat, false)}
+        {box([0.04, DOOR_H - 0.1, 0.04], [w - 0.14, DOOR_H / 2 - 0.02, 0], frameMat, false)}
+        {box([0.025, 0.5, 0.025], [w - 0.24, 1.05, face * 0.05], frameMat, false)}
+      </group>
+    </group>
+  )
 }
 
 function Rug({ room, w, d, dx = 0, dz = 0 }) {
@@ -247,7 +284,7 @@ function Marketing() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} />
+      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
       <mesh position={[cx - 0.2, 1.45, wz + 0.13]}>
         <planeGeometry args={[2.4, 1.2]} />
         <meshStandardMaterial map={stickyBoard()} roughness={0.5} />
@@ -255,7 +292,7 @@ function Marketing() {
       <Rug room={r} w={5.8} d={5} dz={0.9} />
       <DeskRow id="pazarlama" n0={10} />
       <Cabinet w={1} position={[r.x[1] - 1.2, 0, wz + 0.35]} />
-      <Plant size={1.0} position={[r.x[0] + 0.8, 0, wz + 0.6]} />
+      <Plant size={1.0} position={[r.x[0] + 0.6, 0, r.z[1] - 0.6]} />
       <Plant size={1.0} position={[r.x[1] - 0.6, 0, wz + 0.6]} />
     </group>
   )
@@ -267,8 +304,8 @@ function Research() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} />
-      <WallTV kind="chart" w={2.6} h={1.1} position={[cx, 1.5, wz + 0.14]} />
+      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      <WallTV kind="chart" w={2.6} h={1.1} position={[cx + 0.3, 1.5, wz + 0.14]} />
       <Rug room={r} w={5.8} d={3.6} dz={0.5} />
       <DeskRow id="arastirma" n0={20} />
       <Plant size={0.9} position={[r.x[1] - 0.8, 0, wz + 0.7]} />
@@ -277,29 +314,32 @@ function Research() {
   )
 }
 
-function Meeting() {
+// Muhasebe: kehribar vurgu duvarı, finans paneli, arşiv dolapları, kasa ve üç çalışma masası
+function Accounting() {
   const r = ROOMS[5]
   const [cx, cz] = C(r)
   const wz = r.z[0]
-  const slat = useMemo(() => new THREE.MeshStandardMaterial({ map: slats(), roughness: 0.6 }), [])
   return (
     <group>
-      <AccentWall x={r.x} z={wz} color={r.accent} />
-      <WallTV kind="landscape" w={2.3} h={1.25} position={[cx, 1.55, wz + 0.14]} />
-      {/* ahşap çıtalı kolonlar + sıcak ışık */}
-      {[r.x[0] + 0.7, r.x[1] - 0.7].map((x) => (
-        <group key={x}>
-          {box([0.9, H, 0.25], [x, H / 2, wz + 0.25], slat)}
-          <pointLight position={[x, 2.2, wz + 0.8]} color="#ffd29a" intensity={0.9} distance={3} />
+      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
+      <WallTV kind="chart" w={2.6} h={1.2} position={[cx + 0.6, 1.55, wz + 0.14]} />
+      {/* arşiv dolapları (sağ duvar) ve kasa */}
+      {[0, 1, 2].map((i) => (
+        <group key={i} position={[r.x[1] - 0.38, 0, cz - 1.6 + i * 0.62]}>
+          {box([0.5, 1.6, 0.58], [0, 0.8, 0], MAT.potDark)}
+          {[0.35, 0.8, 1.25].map((y) => box([0.02, 0.03, 0.2], [-0.26, y, 0], MAT.steel, false))}
         </group>
       ))}
-      <Rug room={r} w={4.2} d={4.6} dz={0.4} />
-      <ConferenceTable position={[cx, 0, cz + 0.3]} />
-      <Plant size={0.9} position={[r.x[0] + 1.6, 0, wz + 0.6]} />
-      <Plant size={0.9} position={[r.x[1] - 1.6, 0, wz + 0.6]} />
-      {/* iç cam bölmeler (masa alanını çevreler) */}
-      <Glass axis="z" from={wz + 0.5} to={r.z[1]} at={r.x[0] + 1.15} />
-      <Glass axis="z" from={wz + 0.5} to={r.z[1]} at={r.x[1] - 1.15} />
+      <group position={[r.x[1] - 0.45, 0, r.z[1] - 1.1]}>
+        {box([0.6, 0.75, 0.6], [0, 0.375, 0], MAT.steel)}
+        <mesh position={[-0.305, 0.42, 0]} rotation-y={-Math.PI / 2} material={MAT.black}>
+          <cylinderGeometry args={[0.06, 0.06, 0.02, 24]} />
+        </mesh>
+      </group>
+      <Rug room={r} w={5} d={4.6} dx={-0.4} dz={0.9} />
+      <DeskRow id="muhasebe" n0={40} />
+      <Plant size={1.0} position={[r.x[1] - 0.6, 0, wz + 0.6]} />
+      <Plant size={0.9} position={[r.x[0] + 0.6, 0, r.z[1] - 0.6]} dark />
     </group>
   )
 }
@@ -310,12 +350,12 @@ function Operations() {
   const wz = r.z[0]
   return (
     <group>
-      <AccentWall x={[r.x[0], r.x[1] - 0.6]} z={wz} color={r.accent} />
+      <AccentWall x={r.x} z={wz} color={r.accent} door={[r.x[0] + 0.45, r.x[0] + 1.45]} />
       <WallTV kind="map" w={2.8} h={1.4} position={[cx - 0.8, 1.6, wz + 0.14]} />
       {[0, 1, 2].map((i) => <Rack key={i} position={[r.x[1] - 2.4 + i * 0.65, 0, wz + 0.6]} />)}
       <Rug room={r} w={5.2} d={3.4} dx={-0.6} dz={0.5} />
       <DeskRow id="operasyon" n0={30} />
-      <Plant size={1.0} position={[r.x[0] + 0.7, 0, wz + 1.6]} />
+      <Plant size={1.0} position={[r.x[0] + 0.6, 0, r.z[1] - 0.7]} />
       <Plant size={1.2} position={[r.x[1] - 0.7, 0, r.z[1] - 0.8]} />
     </group>
   )
@@ -341,8 +381,6 @@ function Partitions() {
       {[-7.5, 0, 7.5].map((x) => (
         <Glass key={x} axis="z" from={FRONT[0]} to={FRONT[1]} at={x} h={H - 0.2} />
       ))}
-      <Glass axis="x" from={0} to={2.4} at={FRONT[0] - 0.01} h={2.4} />
-      <Glass axis="x" from={5.1} to={7.5} at={FRONT[0] - 0.01} h={2.4} />
       {/* koridor bitkileri */}
       <Plant size={1.1} position={[-14.3, 0, -1.2]} />
       <Plant size={1.1} position={[14.3, 0, -0.6]} />
@@ -409,6 +447,7 @@ function RoomZones() {
 const HOME = { target: new THREE.Vector3(0, 0, -0.2), pos: new THREE.Vector3(0, 21, 23) }
 function CameraRig() {
   const roomId = useStore((s) => s.roomId)
+  const camReset = useStore((s) => s.camReset)
   const controls = useThree((s) => s.controls)
   const camera = useThree((s) => s.camera)
   const goal = useRef(null)
@@ -420,7 +459,23 @@ function CameraRig() {
       const t = new THREE.Vector3(cx, 0.6, cz)
       goal.current = { target: t, pos: t.clone().add(new THREE.Vector3(0, 8.5, 9.5)) }
     }
-  }, [roomId])
+  }, [roomId, camReset])
+  // Kullanıcı sürükleyip yakınlaştırınca: süzülmeyi bırak, "Genel görünüm" düğmesini göster
+  useEffect(() => {
+    if (!controls) return
+    const onStart = () => (goal.current = null)
+    const onChange = () => {
+      if (goal.current) return
+      const moved = camera.position.distanceTo(HOME.pos) > 0.3 || controls.target.distanceTo(HOME.target) > 0.15
+      useStore.getState().setCamMoved(moved)
+    }
+    controls.addEventListener('start', onStart)
+    controls.addEventListener('change', onChange)
+    return () => {
+      controls.removeEventListener('start', onStart)
+      controls.removeEventListener('change', onChange)
+    }
+  }, [controls, camera])
   useFrame((_, dt) => {
     const g = goal.current
     if (!g || !controls) return
@@ -428,7 +483,12 @@ function CameraRig() {
     camera.position.lerp(g.pos, k)
     controls.target.lerp(g.target, k)
     controls.update()
-    if (camera.position.distanceToSquared(g.pos) < 1e-4) goal.current = null
+    if (camera.position.distanceToSquared(g.pos) < 1e-4 && controls.target.distanceToSquared(g.target) < 1e-4) {
+      camera.position.copy(g.pos)
+      controls.target.copy(g.target)
+      controls.update()
+      goal.current = null
+    }
   })
   return null
 }
@@ -437,7 +497,7 @@ export default function HQ() {
   const dark = useStore((s) => s.theme === 'dark')
   return (
     <div className="absolute inset-0">
-      <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false }} onPointerMissed={() => useStore.getState().focusRoom(null)}>
+      <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
         <color attach="background" args={[dark ? '#0d1117' : '#eef0f2']} />
         <Suspense fallback={null}>
           <Environment files={lobby} environmentIntensity={dark ? 0.25 : 0.75} />
@@ -451,7 +511,7 @@ export default function HQ() {
           <Design />
           <Marketing />
           <Research />
-          <Meeting />
+          <Accounting />
           <Operations />
           <Partitions />
           <RoomZones />

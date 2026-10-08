@@ -51,7 +51,7 @@ export function route(text) {
 }
 
 // Görev başlığı: talimattan kısa bir hedef ifadesi + ekibe göre fiil
-const VERB = { yazilim: 'Geliştir', tasarim: 'Tasarla', pazarlama: 'Kampanya', arastirma: 'Araştır', operasyon: 'Otomatize et' }
+const VERB = { yazilim: 'Geliştir', tasarim: 'Tasarla', pazarlama: 'Kampanya', arastirma: 'Araştır', operasyon: 'Otomatize et', muhasebe: 'Hesapla' }
 function shortGoal(text) {
   const t = text.replace(/^\s*ada[,:\s]+/i, '').replace(/[.!?…]+\s*$/, '').trim()
   return t.length > 24 ? `${t.slice(0, 23).trimEnd()}…` : t
@@ -88,7 +88,7 @@ const save = (key, value) => {
 }
 
 const THEME_COLORS = { light: '#eef3fa', dark: '#05080f' }
-const LIGHT_ORDER = ['day', 'dusk', 'night']
+const LIGHT_ORDER = ['day', 'night']
 const initialTheme = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme
@@ -102,10 +102,10 @@ function loadLeads() {
     return {}
   }
 }
-// Ofis ışığı: gündüz / akşam / gece. Arayüz teması yalnızca gecede koyudur.
+// Ofis ışığı: gündüz / gece. Arayüz teması yalnızca gecede koyudur.
 const initialLighting = () => {
   const saved = load('kkm:light', null)
-  if (LIGHT_ORDER.includes(saved)) return saved === 'night' ? 'night' : saved
+  if (LIGHT_ORDER.includes(saved)) return saved
   return initialTheme() === 'dark' ? 'night' : 'day'
 }
 const initialUser = () => {
@@ -134,6 +134,8 @@ export const useStore = create((set, get) => ({
   selectedId: null,
   roomId: null,
   hoveredRoom: null,
+  camMoved: false, // kullanıcı kamerayı ilk görünümden uzaklaştırdı mı
+  camReset: 0, // artınca kamera ilk görünüme döner
 
   messages: CHAT_HISTORY,
   typing: false,
@@ -160,7 +162,7 @@ export const useStore = create((set, get) => ({
     save('kkm:user', userId)
     set({ userId })
   },
-  // Işığı döndür: gündüz → akşam → gece → gündüz (koyu arayüz yalnızca gecede)
+  // Işığı değiştir: gündüz ⇄ gece (gecede arayüz de koyu)
   cycleLighting: () => {
     const lighting = LIGHT_ORDER[(LIGHT_ORDER.indexOf(get().lighting) + 1) % LIGHT_ORDER.length]
     const theme = lighting === 'night' ? 'dark' : 'light'
@@ -174,6 +176,9 @@ export const useStore = create((set, get) => ({
     if (!id || get().roomId === id) return set({ roomId: null, selectedId: null })
     set({ roomId: id, selectedId: DEPT_BY_ID.get(id)?.board ?? null })
   },
+  setCamMoved: (camMoved) => get().camMoved !== camMoved && set({ camMoved }),
+  // Genel görünüm: oda seçimini bırak, kamerayı açılış görünümüne döndür
+  resetView: () => set((s) => ({ roomId: null, selectedId: null, camMoved: false, camReset: s.camReset + 1 })),
   hoverRoom: (id) => get().hoveredRoom !== id && set({ hoveredRoom: id }),
 
   openChat: () => set({ chatOpen: true, unread: 0 }),

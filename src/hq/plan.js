@@ -10,7 +10,7 @@ export const ROOMS = [
   { id: 'tasarim', x: [5, 15], z: BACK, accent: '#b8737b', rug: '#c48d91' },
   { id: 'pazarlama', x: [-15, -7.5], z: FRONT, accent: '#d4682c', rug: '#c46a33' },
   { id: 'arastirma', x: [-7.5, 0], z: FRONT, accent: '#7a55c4', rug: '#6e54a8' },
-  { id: 'toplanti', x: [0, 7.5], z: FRONT, accent: '#ead3a6', rug: '#d8c8aa' },
+  { id: 'muhasebe', x: [0, 7.5], z: FRONT, accent: '#b8862e', rug: '#cbb07c' },
   { id: 'operasyon', x: [7.5, 15], z: FRONT, accent: '#1f6f45', rug: '#6f8c6b' },
 ]
 export const ROOM_BY_ID = new Map(ROOMS.map((r) => [r.id, r]))
@@ -28,6 +28,7 @@ export const DESKS = {
   pazarlama: at('pazarlama', [[-1.4, -0.2], [1.4, -0.2], [-1.4, 2.0], [1.4, 2.0]]),
   arastirma: at('arastirma', [[-2, 0, { scale: 0.9 }], [0, 0, { scale: 0.9, screen: 'chart' }], [2, 0, { scale: 0.9 }]]),
   operasyon: at('operasyon', [[-1.9, 0.2], [0.6, 0.2]]),
+  muhasebe: at('muhasebe', [[-1.9, 0.1, { screen: 'chart' }], [0.6, 0.1, { screen: 'chart' }], [-0.65, 2.3, { screen: 'chart' }]]),
 }
 // CEO: yönetici masasının arkasındaki koltuk (masaya, yani +z yönüne bakar)
 const [ycx, ycz] = C(ROOM_BY_ID.get('yonetim'))
