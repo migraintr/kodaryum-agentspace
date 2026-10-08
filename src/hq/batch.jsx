@@ -39,6 +39,26 @@ function prepare(mesh, root) {
   return g
 }
 
+// Hareket etmeyen alt ağaçların dünya matrisi her karede yeniden hesaplanmasın (matrixWorldAutoUpdate=false).
+// Hareketli (noMerge: kesilebilen duvar) ağaçlar ve onların atalarında güncelleme açık kalır.
+function freeze(root) {
+  const dynamic = new Set()
+  root.traverse((o) => {
+    if (o.userData?.noMerge) for (let p = o; p && p !== root.parent; p = p.parent) dynamic.add(p)
+  })
+  let n = 0
+  const walk = (o) => {
+    if (dynamic.has(o)) o.children.forEach(walk)
+    else {
+      o.matrixWorldAutoUpdate = false
+      n++
+    }
+  }
+  root.updateWorldMatrix(true, true)
+  root.children.forEach(walk)
+  return n
+}
+
 export function batchStatic(root) {
   root.updateWorldMatrix(true, true)
   const buckets = new Map()
@@ -88,7 +108,7 @@ export function batchStatic(root) {
   }
   removed.forEach((o) => o.removeFromParent())
   root.add(merged)
-  return { before: before, after: merged.children.length, kept: before - removed.length }
+  return { before: before, after: merged.children.length, kept: before - removed.length, frozen: freeze(root) }
 }
 
 /** Alt ağacı yerleştikten sonra bir kez birleştirir (kalite düşükse ya da `off` ile atlanabilir) */

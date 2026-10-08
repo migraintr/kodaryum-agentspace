@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { createDeskPose } from './deskPose.js'
 import { createGait } from './gait.js'
+import { LEVELS, useQuality } from '../quality.js'
 import { aim, bakeRetarget, baseName, boneHeight, prefixOf, restMap, roll, rollPalm } from './rig.js'
 
 export const MODELS = {
@@ -22,6 +23,27 @@ export const MODELS = {
   brunette: '/models/brunette.glb',
 }
 const ANIMS = '/agents/anims.glb'
+// Uzak mesafe ağları (yalnızca geometri, ~%28 üçgen): aynı iskelete bağlı SkinnedMesh'lerin geometrisi değiştirilir
+const LODS = { man: '/agents/man-lod.glb', woman: '/agents/woman-lod.glb' }
+Object.values(LODS).forEach((u) => useGLTF.preload(u))
+// Aktarılmış klipler model türü + hareket başına bir kez üretilir (21 karakter aynı iskeleti paylaşır; her biri yeniden örneklemesin)
+const CLIP_CACHE = new Map()
+const lodInfo = new WeakMap() // LOD sahnesi → { geo: ad → geometri, ok }
+function lodOf(lodScene, fullScene) {
+  let r = lodInfo.get(lodScene)
+  if (r) return r
+  const names = (sc) => {
+    let sk
+    sc.traverse((o) => o.isSkinnedMesh && !sk && (sk = o))
+    return sk?.skeleton.bones.map((b) => b.name).join()
+  }
+  const geo = new Map()
+  lodScene.traverse((o) => o.isMesh && o.geometry.attributes.skinIndex && geo.set(o.name, o.geometry))
+  const ok = geo.size > 0 && names(lodScene) === names(fullScene) // eklem sırası aynı değilse LOD kullanılmaz
+  if (!ok) console.warn('[LOD] eklem sırası uyuşmuyor, uzak ağ devre dışı')
+  lodInfo.set(lodScene, (r = { geo, ok }))
+  return r
+}
 ;[MODELS.man, MODELS.woman].forEach((u) => useGLTF.preload(u))
 useGLTF.preload(ANIMS)
 
@@ -135,12 +157,14 @@ const _tv = new THREE.Vector3()
 export default function Character({ look, action = 'idle', height = 1.75, speed = 1, phase = 0, speaking = false, tablet = false, work = null, ...props }) {
   const { scene } = useGLTF(MODELS[look.model])
   const anim = useGLTF(ANIMS)
+  const lodScene = useGLTF(LODS[look.model] ?? MODELS[look.model]).scene
   const model = useMemo(() => clone(scene), [scene])
   const prefix = useMemo(() => prefixOf(model), [model])
   const rest = useMemo(() => restMap(model), [model])
   const mixer = useMemo(() => new THREE.AnimationMixer(model), [model])
   const bones = useRef({})
   const blinkTargets = useRef([])
+  const lod = useRef({ meshes: [], far: false, tick: 0, skip: 0, acc: 0 })
 
   useEffect(() => {
     model.scale.setScalar(1)
@@ -184,6 +208,14 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
         addCeoGear(model, bones.current)
       }
     }
+    // Uzak mesafe ağı eşleşmeleri
+    const li = LODS[look.model] ? lodOf(lodScene, scene) : null
+    lod.current.meshes = []
+    if (li?.ok)
+      model.traverse((o) => {
+        const g = o.isSkinnedMesh && li.geo.get(o.name)
+        if (g) lod.current.meshes.push([o, o.geometry, g])
+      })
     // Göz kırpma morfları (varsa): eyeBlinkLeft/Right ya da eyesClosed
     blinkTargets.current = []
     model.traverse((o) => {
@@ -254,7 +286,9 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
         if (q) o.quaternion.copy(q)
       })
       model.updateMatrixWorld(true)
-      clip = clips.current[name] = bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+      const key = `${look.model}:${name}`
+      clip = clips.current[name] = CLIP_CACHE.get(key) ?? bakeRetarget(anim.animations.find((a) => a.name === name), src, model)
+      CLIP_CACHE.set(key, clip)
       for (const [o, q, pos] of saved) o.quaternion.copy(q), o.position.copy(pos)
       model.updateMatrixWorld(true)
     }
@@ -304,7 +338,27 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
       posed.current = true
       requestAnimationFrame(() => (model.visible = true))
     }
+    // Mesafeye göre ağ ayrıntısı (her 8 karede bir bakılır; eşik farkı titremeyi önler)
+    const L = lod.current
+    if (L.meshes.length && (L.tick++ & 7) === 0) {
+      model.getWorldPosition(_tv)
+      const d = st.camera.position.distanceTo(_tv)
+      const near = LEVELS[useQuality.getState().level].lod
+      const far = L.far ? d > near * 0.85 : d > near
+      L.every = !far ? 1 : Math.max(LEVELS[useQuality.getState().level].seatedEvery, d > near * 1.8 ? 3 : 2) // uzak ve çok uzak: poz 1/2 ve 1/3 hızda
+      if (far !== L.far) {
+        L.far = far
+        for (const [o, hi, lo] of L.meshes) o.geometry = far ? lo : hi
+      }
+    }
     const bl = blend.current
+    // Uzaktaki masa başı çalışan: poz hesabı her N karede bir (geçen süre toplanıp verilir; geçişte atlanmaz)
+    if (L.far && SIT.has(action) && bl.last === action && bl.t >= 1 && ++L.skip % (L.every || 1) !== 0) {
+      L.acc += dt
+      return
+    }
+    dt += L.acc
+    L.acc = 0
     if (bl.last !== null && bl.last !== action) {
       bl.from = bonesAll.map((o) => o.quaternion.clone())
       bl.pos.copy(model.position)

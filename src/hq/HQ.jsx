@@ -5,7 +5,7 @@
 // arkasına geçince o duvarlar alçalır (cutaway.jsx).
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Html, OrbitControls, PerformanceMonitor, RoundedBox } from '@react-three/drei'
+import { Environment, Html, OrbitControls, PerformanceMonitor } from '@react-three/drei'
 import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
 import { ToneMappingMode } from 'postprocessing'
 import * as THREE from 'three'
@@ -485,11 +485,21 @@ function RoomZones() {
 function SceneReady() {
   const { gl, scene, camera } = useThree()
   const frames = useRef(0)
+  const compiled = useRef(false)
   useEffect(() => {
-    gl.compile(scene, camera)
+    // Gölgelendiricileri paralel (KHR_parallel_shader_compile) ve ana iş parçacığını bloklamadan derle
+    let alive = true
+    const done = () => alive && (compiled.current = true)
+    gl.compileAsync(scene, camera).then(done, () => {
+      gl.compile(scene, camera)
+      done()
+    })
+    return () => {
+      alive = false
+    }
   }, [gl, scene, camera])
   useFrame(() => {
-    if (frames.current++ === 20) useStore.setState({ sceneReady: true })
+    if (compiled.current && frames.current++ === 20) useStore.setState({ sceneReady: true })
   })
   return null
 }
@@ -514,9 +524,10 @@ function Quality() {
     }
   }, -1)
   const onDecline = () => {
+    const before = useQuality.getState().level
     down()
     const l = useQuality.getState().level
-    useStore.getState().notify(`Takılma algılandı — grafik kalitesi: ${LEVELS[l].name}`, 'info')
+    if (l !== before) useStore.getState().notify(`Takılma algılandı — grafik kalitesi: ${LEVELS[l].name}`, 'info')
   }
   return <PerformanceMonitor bounds={(hz) => (hz > 90 ? [50, 100] : [38, 58])} flipflops={3} onDecline={onDecline} onIncline={up} onFallback={down} />
 }

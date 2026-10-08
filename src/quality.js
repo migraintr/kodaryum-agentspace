@@ -10,10 +10,10 @@ const weak = (nav.deviceMemory && nav.deviceMemory <= 4) || (nav.hardwareConcurr
 export const IS_TOUCH = touch || narrow
 
 export const LEVELS = [
-  // shadowEvery: gölge haritası kaç karede bir yenilenir · seatedEvery: oturan çalışan pozu kaç karede bir
-  { name: 'Düşük', dpr: [1, 1], shadowMap: 1024, shadowEvery: 4, ao: false, bloom: false, smaa: false, post: false, seatedEvery: 3, far: 18 },
-  { name: 'Orta', dpr: [1, 1.25], shadowMap: 2048, shadowEvery: 2, ao: false, bloom: true, smaa: false, post: true, seatedEvery: 2, far: 30 },
-  { name: 'Yüksek', dpr: [1, 1.75], shadowMap: 2048, shadowEvery: 1, ao: true, bloom: true, smaa: true, post: true, seatedEvery: 1, far: 60 },
+  // lod: karakterler kameraya bu mesafeden (m) uzaksa sade ağ (~%28 üçgen) kullanır · shadowEvery: gölge haritası kaç karede bir yenilenir · seatedEvery: oturan çalışan pozu kaç karede bir
+  { name: 'Düşük', dpr: [1, 1], shadowMap: 1024, shadowEvery: 4, ao: false, bloom: false, smaa: false, post: false, seatedEvery: 3, lod: 5 },
+  { name: 'Orta', dpr: [1, 1.25], shadowMap: 2048, shadowEvery: 2, ao: false, bloom: true, smaa: false, post: true, seatedEvery: 2, lod: 8 },
+  { name: 'Yüksek', dpr: [1, 1.75], shadowMap: 2048, shadowEvery: 1, ao: true, bloom: true, smaa: true, post: true, seatedEvery: 1, lod: 14 },
 ]
 
 const read = () => {
