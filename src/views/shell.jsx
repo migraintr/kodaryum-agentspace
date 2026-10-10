@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useStore } from '../store.js'
+import { SetupStrip } from '../company/SetupReminder.jsx'
 import { GLASS, alpha } from '../ui/kit.jsx'
 
-export function ViewShell({ icon: Icon, color = '#0ea5e9', title, subtitle, actions, children }) {
+export function ViewShell({ icon: Icon, color = '#0ea5e9', title, subtitle, actions, children, hideSetupStrip }) {
   const setView = useStore((s) => s.setView)
   return (
     <motion.section
@@ -36,6 +37,7 @@ export function ViewShell({ icon: Icon, color = '#0ea5e9', title, subtitle, acti
           <X size={18} />
         </button>
       </header>
+      {!hideSetupStrip && <SetupStrip />}
       {children}
     </motion.section>
   )

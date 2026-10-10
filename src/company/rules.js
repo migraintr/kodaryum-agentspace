@@ -26,7 +26,7 @@ const load = () => {
 }
 const save = (s) => {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ profile: s.profile, onboarded: s.onboarded, history: s.history, dismissed: s.dismissed, version: s.version }))
+    localStorage.setItem(KEY, JSON.stringify({ profile: s.profile, onboarded: s.onboarded, history: s.history, version: s.version }))
   } catch {
     /* depolama kapalı */
   }
@@ -53,15 +53,12 @@ export const useCompany = create((set, getS) => ({
   profile: saved?.profile ?? emptyProfile(),
   onboarded: saved?.onboarded ?? false,
   history: saved?.history ?? [], // [{ at, note, who, snapshot }]
-  dismissed: saved?.dismissed ?? false, // açılış davetini kapattı
+  snoozedUntil: 0, // davet kartı "Sonra" ile geçici gizlenir (kalıcı kapanmaz; kurulum yapılana dek hatırlatma sürer)
   version: saved?.version ?? 0,
   // arayüz durumu
   section: 'kimlik',
   setSection: (section) => set({ section }),
-  dismiss: () => {
-    set({ dismissed: true })
-    save(getS())
-  },
+  snooze: (ms = 5 * 60_000) => set({ snoozedUntil: Date.now() + ms }),
   /** Cevap yaz (taslak olarak anında kaydedilir; "Kaydet" sürüm geçmişi oluşturur) */
   answer: (path, value) => {
     set((s) => ({ profile: setIn(s.profile, path, value) }))
@@ -83,7 +80,7 @@ export const useCompany = create((set, getS) => ({
     getS().commit(`Sürüm ${h.version} geri yüklendi`)
   },
   reset: () => {
-    set({ profile: emptyProfile(), onboarded: false, history: [], version: 0, dismissed: false })
+    set({ profile: emptyProfile(), onboarded: false, history: [], version: 0, snoozedUntil: 0 })
     save(getS())
   },
   importJson: (text) => {
@@ -147,3 +144,16 @@ export function companyContext(profile = useCompany.getState().profile) {
 
 export const hasProfile = () => useCompany.getState().onboarded
 if (import.meta.env.DEV && typeof window !== 'undefined') window.__company = useCompany
+
+/** Girilmiş cevap sayısı (taslak ilerlemesi için kaba ölçü; soru kataloğunu yüklemeden hesaplanır) */
+export function answerCount(profile) {
+  let n = 0
+  const walk = (o) => {
+    for (const v of Object.values(o ?? {})) {
+      if (v && typeof v === 'object' && !Array.isArray(v)) walk(v)
+      else if (v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length)) n++
+    }
+  }
+  walk(profile)
+  return n
+}

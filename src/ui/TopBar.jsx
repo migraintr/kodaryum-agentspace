@@ -3,6 +3,7 @@ import { CalendarDays, ListChecks, Menu, Moon, Sparkles, Sun, Users } from 'luci
 import { COMPANY, PEOPLE, USERS, USER_BY_ID } from '../data.js'
 import { useStore } from '../store.js'
 import { Avatar, Logo, useNow } from './kit.jsx'
+import { SetupChip } from '../company/SetupReminder.jsx'
 
 const TOTAL = PEOPLE.length
 const ICON_BTN =
@@ -178,6 +179,7 @@ export function TopBar() {
       <Brand />
       <AskAda />
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 md:ml-0">
+        <SetupChip />
         <Staff />
         <StaffCompact />
         <Clock />

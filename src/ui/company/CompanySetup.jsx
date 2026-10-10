@@ -63,6 +63,7 @@ export default function CompanySetup() {
 
   return (
     <ViewShell
+      hideSetupStrip
       icon={Building2}
       color="#6366f1"
       title="Şirket Kurulumu"

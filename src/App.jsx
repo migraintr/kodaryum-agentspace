@@ -6,7 +6,7 @@ import { deferred, whenIdle } from './deferred.js'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Building2, CircleCheck, Info, Maximize2, MousePointer2, Move, RotateCw, ScanSearch, TriangleAlert, ZoomIn } from 'lucide-react'
 import { useStore } from './store.js'
-import { useCompany } from './company/rules.js'
+import { answerCount, useCompany } from './company/rules.js'
 import { ChatWidget } from './ui/ChatWidget.jsx'
 import { NAV } from './ui/nav.js'
 import { Sidebar } from './ui/Sidebar.jsx'
@@ -139,26 +139,35 @@ function MouseHint() {
   )
 }
 
-// İlk açılışta (kurulum yapılmamışsa) şirket kurulumuna davet: kapatılabilir, tekrar çıkmaz
+// Kurulum yapılmamışsa davet kartı her açılışta görünür. "Sonra" kartı 5 dakika gizler, sonra yeniden çıkar; üst bardaki rozet ve
+// ekran/sohbet şeritleri kurulum tamamlanana dek hep görünür. Kurulum kaydedilince hepsi kaybolur.
 function CompanyWelcome() {
   const ready = useStore((s) => s.sceneReady)
   const view = useStore((s) => s.view)
   const onboarded = useCompany((s) => s.onboarded)
-  const dismissed = useCompany((s) => s.dismissed)
-  const open = ready && view === 'genel' && !onboarded && !dismissed
+  const snoozedUntil = useCompany((s) => s.snoozedUntil)
+  const n = useCompany((s) => answerCount(s.profile))
+  const [, bump] = useState(0)
+  useEffect(() => {
+    const left = snoozedUntil - Date.now()
+    if (left <= 0) return undefined
+    const id = setTimeout(() => bump((x) => x + 1), left + 50)
+    return () => clearTimeout(id)
+  }, [snoozedUntil])
+  const open = ready && view === 'genel' && !onboarded && Date.now() >= snoozedUntil
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-20 z-30 flex justify-center px-3 sm:bottom-6">
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: 1.2 } }} exit={{ opacity: 0, y: 12 }} className="pointer-events-auto flex max-w-[560px] flex-col gap-3 rounded-2xl border border-indigo-400/30 bg-[#0d1a3d]/92 p-4 text-white shadow-2xl backdrop-blur-md sm:flex-row sm:items-center">
+          <motion.div initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: 1.2 } }} exit={{ opacity: 0, y: 12 }} className="pointer-events-auto flex max-w-[580px] flex-col gap-3 rounded-2xl border border-indigo-400/30 bg-[#0d1a3d]/92 p-4 text-white shadow-2xl backdrop-blur-md sm:flex-row sm:items-center">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-500"><Building2 size={22} /></span>
             <div className="min-w-0 flex-1 leading-snug">
-              <p className="text-[14px] font-bold">Şirketinizin çalışma mantığını belirleyelim</p>
-              <p className="mt-0.5 text-[12px] text-white/75">Kağan ve departmanlar sizin kurallarınıza göre çalışsın: onaylar, yetkiler, tempo, raporlama. Hazır şıklar ve öneriler var; sonra istediğiniz zaman değiştirebilirsiniz.</p>
+              <p className="text-[14px] font-bold">{n ? 'Şirket kurulumunuz yarım kaldı' : 'Şirketinizin çalışma mantığını belirleyelim'}</p>
+              <p className="mt-0.5 text-[12px] text-white/75">{n ? `${n} cevap girdiniz; kurulumu tamamlayıp kaydedene kadar ofis varsayılan davranışla çalışır. ` : 'Kağan ve departmanlar sizin kurallarınıza göre çalışsın: onaylar, yetkiler, tempo, raporlama. '}Hazır şıklar ve öneriler var; sonra istediğiniz zaman değiştirebilirsiniz.</p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => useCompany.getState().dismiss()} className="h-9 cursor-pointer rounded-xl px-3 text-[12.5px] font-semibold text-white/75 hover:bg-white/10">Sonra</button>
-              <button type="button" onClick={() => (useCompany.getState().dismiss(), useStore.getState().openCompany('kimlik'))} className="h-9 cursor-pointer rounded-xl bg-gradient-to-br from-sky-500 to-indigo-500 px-4 text-[12.5px] font-bold">Kurulumu başlat</button>
+              <button type="button" onClick={() => useCompany.getState().snooze()} className="h-9 cursor-pointer rounded-xl px-3 text-[12.5px] font-semibold text-white/75 hover:bg-white/10" title="5 dakika sonra tekrar hatırlatılır">Sonra</button>
+              <button type="button" onClick={() => useStore.getState().openCompany(n ? undefined : 'kimlik')} className="h-9 cursor-pointer rounded-xl bg-gradient-to-br from-sky-500 to-indigo-500 px-4 text-[12.5px] font-bold">{n ? 'Devam et' : 'Kurulumu başlat'}</button>
             </div>
           </motion.div>
         )}

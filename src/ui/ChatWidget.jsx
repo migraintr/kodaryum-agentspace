@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { BOARD_BY_ID, PEOPLE, PERSON_BY_ID, PROJECTS, PROJECT_BY_ID, USER_BY_ID } from '../data.js'
 import { COMMANDS, PRIORITY, deptOfTask, projectStats, useStore } from '../store.js'
+import { SetupStrip } from '../company/SetupReminder.jsx'
 import { Avatar, Logo, alpha, clock } from './kit.jsx'
 
 // Bağlama göre hızlı yanıtlar (proje sekmesine göre değişir)
@@ -518,6 +519,8 @@ function ChatWindow() {
           </button>
         ))}
       </header>
+
+      <SetupStrip compact />
 
       <AnimatePresence>
         {searching && (

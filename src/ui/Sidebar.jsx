@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, ChevronRight, X } from 'lucide-react'
 import { DEPARTMENTS, USER_BY_ID, teamOf } from '../data.js'
 import { HEALTH, useStore } from '../store.js'
+import { useCompany } from '../company/rules.js'
 import { Avatar, Logo } from './kit.jsx'
 import { NAV_GROUPS, SETTINGS } from './nav.js'
 
@@ -89,7 +90,8 @@ export function Sidebar() {
   const warnings = useStore((s) => s.summary.warnings)
   const [roomsOpen, setRoomsOpen] = useState(true)
   const [soonOpen, setSoonOpen] = useState(false)
-  const badge = { gorevler: openTasks }
+  const setupDone = useCompany((s) => s.onboarded)
+  const badge = { gorevler: openTasks, sirket: setupDone ? 0 : '!' }
   const go = (v) => {
     setView(v)
     closeNav()
