@@ -296,6 +296,7 @@ export function Meter({ value, max = 100, label, format = (v) => `%${Math.round(
 
 /** Küçük eğilim çizgisi: silik çizgi, son nokta vurgu renginde */
 export function Sparkline({ values, width = 84, height = 26, color = 'var(--s1)' }) {
+  if (!values || values.length < 2) return null // veri yokken NaN üretmesin
   const min = Math.min(...values)
   const max = Math.max(...values)
   const X = (i) => 2 + (i / (values.length - 1)) * (width - 6)
