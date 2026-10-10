@@ -90,7 +90,7 @@ const isModelMissing = (e) => /not.?found|404|does not exist|unsupported model|i
 const isTransient = (e) => /429|500|502|503|504|RESOURCE_EXHAUSTED|UNAVAILABLE|DEADLINE|ECONNRESET|ETIMEDOUT|fetch failed/i.test(`${e?.status ?? ''} ${e?.message ?? ''}`)
 const thinking = (model) => (/^gemini-2\.5/.test(model) ? { thinkingBudget: 0 } : { thinkingLevel: env('GEMINI_THINKING', 'low') })
 
-async function generate({ system, prompt, schema, temperature = 0.6, maxTokens = 1400, timeout = 30_000 }) {
+export async function generate({ system, prompt, schema, temperature = 0.6, maxTokens = 1400, timeout = 30_000 }) {
   const c = getClient()
   if (!c.client) throw Object.assign(new Error(c.error), { code: 'NOT_CONFIGURED' })
   const list = activeModel ? [activeModel, ...models().filter((m) => m !== activeModel)] : models()
@@ -147,15 +147,15 @@ function record(e) {
 }
 
 // ── Şemalar (Vertex AI OpenAPI alt kümesi) ────────────────────────────────────────────────────────────
-const S = (type, extra = {}) => ({ type, ...extra })
-const str = (description, extra) => S('STRING', { description, ...extra })
-const oneOf = (list) => (list.length ? { enum: list } : {}) // boş enum geçersiz şemadır
+export const S = (type, extra = {}) => ({ type, ...extra })
+export const str = (description, extra) => S('STRING', { description, ...extra })
+export const oneOf = (list) => (list.length ? { enum: list } : {}) // boş enum geçersiz şemadır
 
 // ── Ortak kişilik ve kurallar ─────────────────────────────────────────────────────────────────────────
-const TONE = `Her zaman Türkçe yaz; samimi ama profesyonel, kısa ve net ol. Markdown başlığı, kalın yazı (**), tablo ve kod bloğu kullanma; madde gerekiyorsa satır başında "• " kullan. Kişilerden adlarıyla bahset ve Türkçe ekleri doğru kullan (Okan’a, Esra’nın, Emre’ye). Emoji kullanma.`
+export const TONE = `Her zaman Türkçe yaz; samimi ama profesyonel, kısa ve net ol. Markdown başlığı, kalın yazı (**), tablo ve kod bloğu kullanma; madde gerekiyorsa satır başında "• " kullan. Kişilerden adlarıyla bahset ve Türkçe ekleri doğru kullan (Okan’a, Esra’nın, Emre’ye). Emoji kullanma.`
 const GROUNDING = `Yalnızca sana verilen ŞİRKET DURUMU verisine dayan: ilerleme yüzdeleri, kalan gün, bütçe, görev numaraları, kişiler ve tarihler oradan gelir. Veride olmayan kişi, görev, tarih ya da sayı uydurma; bilmediğin bir şey sorulursa bunu açıkça söyle.`
 
-const block = (title, body) => `${title}:\n${typeof body === 'string' ? body : JSON.stringify(body)}`
+export const block = (title, body) => `${title}:\n${typeof body === 'string' ? body : JSON.stringify(body)}`
 
 // ── 1) Sohbet ────────────────────────────────────────────────────────────────────────────────────────
 function chatSchema(ctx) {
@@ -187,7 +187,7 @@ function chatSchema(ctx) {
         items: S('OBJECT', {
           properties: {
             type: str('eylem', { enum: ['focusRoom', 'openView', 'openStaff', 'openCalendar', 'approvePlan', 'setPriority', 'overview'] }),
-            target: str('focusRoom: departman id · openView: projeler | gorevler | departmanlar | ajanlar · setPriority: normal | yuksek | kritik'),
+            target: str('focusRoom: departman id · openView: projeler | gorevler | departmanlar | ajanlar | pazarlama (Pazarlama Merkezi) · setPriority: normal | yuksek | kritik'),
           },
           required: ['type'],
         }),

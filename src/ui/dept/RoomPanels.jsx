@@ -4,7 +4,7 @@
 // store.viewInset'e yazılır; kamera odayı kalan boş alanın ortasına yerleştirir.
 import { useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronUp, LayoutDashboard, Maximize2, Undo2, X } from 'lucide-react'
+import { ChevronUp, LayoutDashboard, Maximize2, Megaphone, Undo2, X } from 'lucide-react'
 import { DEPARTMENTS, DEPT_BY_ID, teamOf } from '../../data.js'
 import { HEALTH, agentTask, useStore } from '../../store.js'
 import { ChartCard } from '../charts.jsx'
@@ -116,6 +116,11 @@ function DeptSummary({ id, onFull }) {
         <button type="button" onClick={onFull} className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl text-[13px] font-semibold text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${d.color}, #4f46e5)` }}>
           <LayoutDashboard size={16} /> Tam ekran panoyu aç
         </button>
+        {id === 'pazarlama' && (
+          <button type="button" onClick={() => useStore.getState().openMkt('bugun')} className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-amber-500/50 bg-amber-500/10 text-[13px] font-semibold text-[var(--viz-ink)] hover:bg-amber-500/20">
+            <Megaphone size={16} className="text-amber-500" /> Pazarlama Merkezi’ni aç
+          </button>
+        )}
         <div className="h-16 md:h-0" />
       </div>
     </>

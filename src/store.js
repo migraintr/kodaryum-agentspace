@@ -199,7 +199,7 @@ function ceoSay(text, project, delegations = []) {
 // Her yerde aynı kural: önce Gemini (sunucu /api/ai/*), olmazsa/hata verirse eski yerel kural tabanlı metin.
 const clip = (v, n) => String(v ?? '').trim().slice(0, n)
 const ctxOf = (s) => buildContext(s, projectStats)
-const VIEW_OF = { projeler: 'projeler', gorevler: 'gorevler', departmanlar: 'departmanlar', ajanlar: 'ajanlar' }
+const VIEW_OF = { projeler: 'projeler', gorevler: 'gorevler', departmanlar: 'departmanlar', ajanlar: 'ajanlar', pazarlama: 'pazarlama' }
 
 /** Ajanın sohbete düştüğü kısa iş güncellemesi (event: 'start' | 'done'); fallback: yerel metin */
 async function agentLine(event, t, fallback) {
@@ -337,6 +337,9 @@ export const useStore = create((set, get) => ({
   projectLeads: loadLeads(),
 
   setView: (view) => set({ view }),
+  mktTab: null, // Pazarlama Merkezi açılırken gösterilecek sekme
+  // Pazarlama Merkezi: ofis üstünde açılır (tam ekran pano ve oda paneli kapanır)
+  openMkt: (tab) => set({ view: 'pazarlama', mktTab: tab ?? null, deptFull: null, navOpen: false }),
   setProjectLead: (projectId, personId) =>
     set((s) => {
       const projectLeads = { ...s.projectLeads, [projectId]: personId }
@@ -428,10 +431,17 @@ export const useStore = create((set, get) => ({
       const ask = !cmd && !DO && (/\?\s*$/.test(text) || /^(hangi|kim|ne kadar|kac|nasil|neden|durum|rapor|ozet|brifing|bu hafta|oncelik)/.test(q))
       const asked = ask ? (/ekip|yogun|yuk|departman/.test(q) ? '/ekip' : /risk|sorun/.test(q) ? '/risk' : /oncelik|takvim|ne zaman|hafta|tarih/.test(q) ? '/takvim' : /butce|maliyet|harcama/.test(q) ? '/butce' : '/durum') : null
       const c = cmd ?? asked
+      // Pazarlama Merkezi kısayolları ("onay kutusu", "pazarlama planı"…)
+      const mk = !cmd && /(pazarlama merkezi|onay kutusu|icerik takvimi|icerik plani|pazarlama plani|pazarlama karnesi|haftalik rapor|patron raporu)/.exec(q)
       const targets = c ? [] : route(text)
       let reply
       const scope = s.chatProject !== 'all' ? [PROJECT_BY_ID.get(s.chatProject)] : PROJECTS
-      if (c === '/risk') {
+      if (mk) {
+        const tab = /onay/.test(mk[1]) ? 'onay' : /takvim/.test(mk[1]) ? 'takvim' : /plan/.test(mk[1]) ? 'plan' : /karne/.test(mk[1]) ? 'karne' : /rapor/.test(mk[1]) ? 'sonuc' : 'bugun'
+        set({ adaSays: 'Pazarlama Merkezi\naçılıyor.' })
+        get().openMkt(tab)
+        reply = { text: 'Pazarlama Merkezi’ni açtım: onay kutusu, içerik takvimi, plan ve sonuçlar orada. Hatice planı, Emine içeriği, Merve reklamı yürütüyor.', delegations: ['pazarlama'] }
+      } else if (c === '/risk') {
         const rows = scope.flatMap((p) => p.risks.map((r) => `• [${LEVEL[r.level]}] ${p.short}: ${r.text} — ${PERSON_BY_ID.get(r.owner).name}`))
         reply = { text: rows.length ? `Açık riskler (${rows.length}):\n${rows.join('\n')}` : 'Açık risk yok.', project: s.chatProject !== 'all' ? s.chatProject : null }
       } else if (c === '/takvim') {

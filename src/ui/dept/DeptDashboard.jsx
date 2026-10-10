@@ -174,7 +174,15 @@ function Board({ id }) {
                 <AccountingSection />
               </>
             )}
-            {tab === 'pazarlama' && <MarketingSection n={n} />}
+            {tab === 'pazarlama' && (
+              <>
+                <button type="button" onClick={() => useStore.getState().openMkt('bugun')} className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-left hover:bg-amber-500/15">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-white"><Megaphone size={19} /></span>
+                  <span className="min-w-0 flex-1 leading-tight"><b className="block text-[13.5px] text-[var(--viz-ink)]">Pazarlama Merkezi’ni aç</b><span className="text-[12px] text-[var(--viz-muted)]">Onay kutusu, içerik takvimi, 30 günlük plan, kampanyalar, müşteriler, yorumlar ve haftalık patron raporu: işletmenin cebindeki pazarlama departmanı.</span></span>
+                </button>
+                <MarketingSection n={n} />
+              </>
+            )}
             {tab === 'musteri' && <CustomersSection n={n} />}
             {tab === 'operasyon' && <OperationsSection n={n} />}
             {tab === 'ekip' && (

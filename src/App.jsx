@@ -17,6 +17,7 @@ const Scene3D = lazy(() => import('./hq/HQ.jsx'))
 // Menü ekranları (Projeler, AI Çalışanlar…) ilk açıldıklarında yüklenir
 // Menü ekranları ve pencereler ilk açılışta (ya da sahne hazır olduktan sonra boşta) yüklenir: ilk paket küçük kalır
 const VIEWS = deferred(() => import('./views/index.jsx'))
+const MKT = deferred(() => import('./ui/marketing/MarketingCenter.jsx'))
 const STAFF = deferred(() => import('./ui/StaffModal.jsx'))
 const CLOCK = deferred(() => import('./ui/ClockModal.jsx'))
 const CALENDAR = deferred(() => import('./ui/CalendarModal.jsx'))
@@ -36,7 +37,13 @@ function RoomSlot() {
 
 function ViewSlot() {
   const view = useStore((s) => s.view)
-  const mod = VIEWS.useModule(view !== 'genel')
+  const mod = VIEWS.useModule(view !== 'genel' && view !== 'pazarlama')
+  const mkt = MKT.useModule(view === 'pazarlama')
+  if (view === 'pazarlama') {
+    if (!mkt) return null
+    const MarketingCenter = mkt.default
+    return <MarketingCenter />
+  }
   if (view === 'genel' || !mod) return null
   const ViewHost = mod.default
   return <ViewHost view={view} label={NAV.find((n) => n.view === view)?.label} />

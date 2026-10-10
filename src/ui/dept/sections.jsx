@@ -163,7 +163,7 @@ export function DeptTasks({ id, limit = 99 }) {
               <Status level={STATUS_TXT[t.status]?.[1]}>{STATUS_TXT[t.status]?.[0]}</Status>
             </div>
             <Meter value={t.status === 'done' ? 100 : t.progress} kind="progress" />
-            <p className="mt-1 text-[10.5px] text-[var(--viz-muted)]">{p?.name} {p?.surname} · {pr?.short}</p>
+            <p className="mt-1 text-[10.5px] text-[var(--viz-muted)]">{p?.name} {p?.surname} · {pr?.short ?? "Pazarlama modülü"}</p>
           </li>
         )
       })}

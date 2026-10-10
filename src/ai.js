@@ -61,3 +61,4 @@ export function buildContext(s, stats) {
 
 export const aiChat = (body) => call('chat', body)
 export const aiWrite = (body) => call('write', body, 22_000)
+export const aiMkt = (body) => call('mkt', body, 26_000) // Pazarlama modülü: içerik, denetim, plan, marka, yanıt, rapor

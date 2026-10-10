@@ -1,6 +1,20 @@
 // Departmana özel ekran içerikleri (canvas). Her biri o odanın gerçek işini gösterir:
 // Yazılım: kod editörü + CI · Tasarım: tasarım aracı · Pazarlama: kampanya paneli · Araştırma: analiz defteri ·
 // Muhasebe: tablo/defter ve finans paneli · Operasyon: sistem izleme · CEO: şirket özeti.
+// Pazarlama Merkezi'nin kayıtlı belgesinden kısa özet (3B ekranlar sahne yüklenirken bir kez çizilir)
+function mktSnap() {
+  try {
+    const d = JSON.parse(localStorage.getItem('kkm:mkt:v1'))
+    if (!d?.onboarded) return null
+    const c = d.content ?? []
+    const n = (st) => c.filter((x) => st.includes(x.status)).length
+    const m = (d.metrics ?? []).slice(-30)
+    const sum = (k) => m.reduce((a, x) => a + (x[k] || 0), 0)
+    return { name: d.brand?.name ?? 'Pazarlama', draft: n(['draft']), work: n(['review', 'ready', 'scheduled']), pub: n(['published']), leads: sum('leads'), appts: sum('appts'), spend: sum('spend'), series: m.slice(-10).map((x) => x.leads || 0) }
+  } catch {
+    return null
+  }
+}
 let seed = 11
 const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
 const pick = (a) => a[Math.floor(rnd() * a.length)]
@@ -113,11 +127,12 @@ export const SCREENS = {
   },
   // Pazarlama: kampanya performansı (erişim, dönüşüm, kanal)
   social: (g, w, h) => {
-    const top = frame(g, w, h, 'Kampanya Paneli · Lansman', '#f97316')
-    tile(g, 12, top, w * 0.3, 70, 'Erişim', '248B', '#fb923c')
-    tile(g, w * 0.35, top, w * 0.3, 70, 'Tıklama', '%4,8', '#facc15')
-    tile(g, w * 0.68, top, w * 0.3, 70, 'Dönüşüm', '1.204', '#4ade80')
-    line(g, 16, top + 90, w * 0.58, h - top - 110, [3, 4, 4, 6, 7, 6, 9, 11, 12, 15], '#fb923c', 'rgba(251,146,60,.18)')
+    const mk = mktSnap() // Pazarlama Merkezi'ndeki gerçek (kayıtlı) rakamlar; yoksa örnek görünüm
+    const top = frame(g, w, h, mk ? `Kampanya Paneli · ${mk.name}` : 'Kampanya Paneli · Lansman', '#f97316')
+    tile(g, 12, top, w * 0.3, 70, mk ? 'Lead (30 g)' : 'Erişim', mk ? String(mk.leads) : '248B', '#fb923c')
+    tile(g, w * 0.35, top, w * 0.3, 70, mk ? 'Randevu' : 'Tıklama', mk ? String(mk.appts) : '%4,8', '#facc15')
+    tile(g, w * 0.68, top, w * 0.3, 70, mk ? 'Harcama' : 'Dönüşüm', mk ? `${Math.round(mk.spend / 100) / 10}K ₺` : '1.204', '#4ade80')
+    line(g, 16, top + 90, w * 0.58, h - top - 110, mk?.series.length > 2 ? mk.series : [3, 4, 4, 6, 7, 6, 9, 11, 12, 15], '#fb923c', 'rgba(251,146,60,.18)')
     const ch = [['Instagram', 0.82, '#e1306c'], ['LinkedIn', 0.6, '#0a66c2'], ['Google', 0.48, '#34a853'], ['E-posta', 0.3, '#facc15']]
     ch.forEach(([n, v, c], i) => {
       const y = top + 96 + i * 34
@@ -261,11 +276,13 @@ export function campaignBoard(g, w, h) {
   g.strokeStyle = '#9aa0a6'
   g.lineWidth = 6
   g.strokeRect(3, 3, w - 6, h - 6)
+  const mk = mktSnap()
   const cols = [['FİKİR', '#ffd166'], ['HAZIRLANIYOR', '#f78c6b'], ['YAYINDA', '#06d6a0']]
+  const real = mk ? [mk.draft, mk.work, mk.pub] : null
   cols.forEach(([t, c], i) => {
     const x = 14 + i * (w - 28) / 3
-    text(g, t, x + 6, 24, 16, '#334155', 800)
-    for (let k = 0; k < 3 + (i === 0 ? 1 : 0); k++) {
+    text(g, real ? `${t} · ${real[i]}` : t, x + 6, 24, real ? 13 : 16, '#334155', 800)
+    for (let k = 0; k < (real ? Math.min(real[i], 6) : 3 + (i === 0 ? 1 : 0)); k++) {
       g.fillStyle = c
       g.fillRect(x + 6 + (k % 2) * 72, 44 + Math.floor(k / 2) * 92, 62, 80)
       g.fillStyle = 'rgba(0,0,0,.35)'
