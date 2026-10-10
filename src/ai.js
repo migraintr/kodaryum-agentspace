@@ -2,6 +2,7 @@
 // Anahtar tarayıcıda yoktur. Sunucu yapılandırılmamışsa ya da hata verirse çağıranlar yerel kural tabanlı
 // yanıta düşer (store.js), arayüz hiçbir zaman boş kalmaz.
 import { AGENTS, DEPARTMENTS, DEPT_BY_ID, PERSON_BY_ID, PROJECTS, USERS } from './data.js'
+import { companyContext, hasProfile } from './company/rules.js'
 
 let down = 0 // son başarısızlık zamanı: kısa süre tekrar denemeden yerele düşer
 const COOLDOWN = 20_000
@@ -55,6 +56,7 @@ export function buildContext(s, stats) {
     pendingPlan: s.tasks.filter((t) => t.status === 'pending').map((t) => ({ no: t.no, title: t.title, owner: t.owner })),
     selectedProjectTab: s.chatProject,
     priority: s.priority,
+    company: hasProfile() ? companyContext() : undefined, // Şirket Kurulumu cevapları: çalışma prensipleri, CEO/departman kuralları
     ceoOfficeNote: `${DEPT_BY_ID.get('yonetim').name}: Kağan masasında`,
   }
 }
@@ -62,3 +64,4 @@ export function buildContext(s, stats) {
 export const aiChat = (body) => call('chat', body)
 export const aiWrite = (body) => call('write', body, 22_000)
 export const aiMkt = (body) => call('mkt', body, 26_000) // Pazarlama modülü: içerik, denetim, plan, marka, yanıt, rapor
+export const aiCompany = (body) => call('company', body, 26_000) // Şirket kurulum formu: bölüm önerileri

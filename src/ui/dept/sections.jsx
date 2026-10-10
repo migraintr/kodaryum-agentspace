@@ -7,6 +7,7 @@ import {
   AGING, CAMPAIGNS, CASHFLOW, CHANNELS, CUSTOMERS, DEPT_FIN, DESIGN, ENGINEERING, FINANCE, FUNNEL, INVOICES, MARKETING, MONTHS, OKRS,
   OPERATIONS, RESEARCH, TAX_CALENDAR, WEEKS, compact, last, num, pct, prev, sum, tl,
 } from '../../metrics.js'
+import { useCompany } from '../../company/rules.js'
 import { TOUR_AGENT } from '../../hq/tour.js'
 import { agentTask, projectStats, useStore } from '../../store.js'
 import { BarChart, ChartCard, DataTable, Funnel, HBars, LineChart, Meter, S, StatTile, Status, seriesTable } from '../charts.jsx'
@@ -628,4 +629,38 @@ export function DeptSpecific({ id, n }) {
     case 'yonetim': return <LeadershipSection n={n} />
     default: return null
   }
+}
+
+// ─── Çalışma prensipleri (Şirket Kurulumu cevapları) ────────────────────────────────────────────────────
+const AUTONOMY = { oner: ['Öner', 'Yalnızca fikir/taslak sunar; her iş onay bekler'], hazirla: ['Hazırla', 'İşi hazırlar; başlatmak için onay ister'], uygula: ['Uygula', 'Şirket onay biçimi izin veriyorsa kendiliğinden başlar'] }
+const WEIGHT = { 1: 'Normal altı', 2: 'Normal', 3: 'Öncelikli' }
+export function DeptPrinciples({ id }) {
+  const d = useCompany((s) => s.profile.depts?.[id]) ?? {}
+  const onboarded = useCompany((s) => s.onboarded)
+  const open = () => useStore.getState().openCompany(`dept-${id}`)
+  const has = d.focus?.length || d.kpis?.length || d.redlines?.length || d.mode || d.autonomy || d.notes
+  if (!has)
+    return (
+      <button type="button" onClick={open} className="w-full cursor-pointer rounded-xl border border-dashed border-[var(--viz-border)] p-3 text-left text-[12px] text-[var(--viz-ink-2)] hover:bg-[var(--viz-hover)]">
+        <b className="text-[var(--viz-ink)]">Çalışma prensipleri belirlenmedi.</b> Odak alanları, otonomi, kalite ölçütleri ve kırmızı çizgileri Şirket Kurulumu’ndan belirleyin; ekip buna göre çalışsın.
+      </button>
+    )
+  const [aut, autHint] = AUTONOMY[d.autonomy ?? 'hazirla']
+  return (
+    <div className="space-y-2.5 text-[12px]">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span title={autHint} className="rounded-md bg-indigo-500/12 px-2 py-0.5 font-semibold text-indigo-600 dark:text-indigo-300">Otonomi: {aut}</span>
+        <span className="rounded-md bg-[var(--viz-hover)] px-2 py-0.5 font-semibold text-[var(--viz-ink-2)]">Hız: {WEIGHT[d.weight ?? 2]}</span>
+        {d.enabled === false && <span className="rounded-md bg-red-500/12 px-2 py-0.5 font-semibold text-red-600">Kapalı: yeni görev almaz</span>}
+        {d.mode && <span className="rounded-md bg-[var(--viz-hover)] px-2 py-0.5 text-[var(--viz-ink-2)]">{d.mode}</span>}
+        {d.review && <span className="rounded-md bg-[var(--viz-hover)] px-2 py-0.5 text-[var(--viz-ink-2)]">İnceleyen: {d.review}</span>}
+      </div>
+      {d.focus?.length > 0 && <p><b className="text-[var(--viz-ink)]">Odak:</b> <span className="text-[var(--viz-ink-2)]">{d.focus.join(' · ')}</span></p>}
+      {d.kpis?.length > 0 && <p><b className="text-[var(--viz-ink)]">Göstergeler:</b> <span className="text-[var(--viz-ink-2)]">{d.kpis.join(' · ')}</span></p>}
+      {d.quality?.length > 0 && <p><b className="text-[var(--viz-ink)]">Kalite:</b> <span className="text-[var(--viz-ink-2)]">{d.quality.join(' · ')}</span></p>}
+      {d.redlines?.length > 0 && <ul className="space-y-0.5">{d.redlines.map((r) => <li key={r} className="flex gap-1.5 text-[var(--viz-ink-2)]"><span className="text-red-500">⛔</span>{r}</li>)}</ul>}
+      {d.notes && <p className="rounded-lg bg-[var(--viz-hover)] p-2 text-[var(--viz-ink-2)]">“{d.notes}”</p>}
+      <button type="button" onClick={open} className="cursor-pointer text-[11.5px] font-semibold text-indigo-600 hover:underline dark:text-indigo-300">{onboarded ? 'Prensipleri düzenle →' : 'Kurulumda düzenle →'}</button>
+    </div>
+  )
 }

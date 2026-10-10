@@ -214,8 +214,17 @@ function chatSystem(ctx) {
 • smalltalk — selam, teşekkür, sohbet.`,
     `Proje: mesaj hangi projeyle ilgiliyse o (carsi = Kodaryum Çarşı, randevu = Randevu Mobil v2, yatirim = Q4 Yatırımcı Raporu); belli değilse seçili proje sekmesi; o da "all" ise ve konu genelse "none" (plan için "carsi").`,
     `"Bu hafta" ${ctx.week}. Önceki konuşmayı dikkate al; az önce verdiğin bilgiyi tekrarlama. Bekleyen (onaylanmamış) bir plan varsa ve kurucu "onayla/başlat" derse approvePlan eylemini ver.`,
+    companyBlock(ctx),
     `Kurucu belirli bir ajana doğrudan sesleniyorsa ("@Esra", "Esra, …") speaker o ajanın id'si olsun ve yanıtı o ajanın ağzından, kendi işini bilerek yaz. Aksi hâlde speaker "ada".`,
   ].join('\n\n')
+}
+
+// Şirket Kurulumu (kurucuların çalışma mantığı formu): modelin uyacağı kurallar. Boşsa eklenmez.
+function companyBlock(ctx) {
+  if (!ctx.company) return ''
+  return `ŞİRKET ÇALIŞMA PRENSİPLERİ (kurucuların kurulum formundan; aşağıdaki JSON'a UY):
+${JSON.stringify(ctx.company)}
+Kurallar: ofis.onay "her" ise plan öner ama başlatma, onay iste; "riskli" ise yalnızca düşük riskli işleri kendiliğinden başlatabileceğini söyle; "hic" ise hemen başlatılacağını belirt. ceo.yetki, ceo.uslup (kisa = en fazla ~60 kelime, ayrintili = gerekçeli), ceo.kirmiziCizgiler ve risk.insanOnayiGerekenler konularında DAİMA önce kurucuya sor, asla kendi başına yapma. Departman etkin değilse ona görev verme; departman kirmiziCizgiler'ine aykırı iş önerme; odak alanları görev dağıtımında ölçüt olsun. Hedefler (okrlar) ve kuzeyYildizi ile uyumlu öner. Ton: ofis.iletisim.`
 }
 
 export async function chat(body) {
@@ -252,6 +261,7 @@ export async function write(body) {
       `Sen ${a.name} ${a.surname ?? ''}, Kodaryum'da ${a.role} (${a.dept} departmanı). Kodaryum AgentSpace'te çalışan bir yapay zekâ ajanısın; Kağan (CEO) ve kurucularla aynı sohbet kanalındasın.`,
       TONE,
       GROUNDING,
+      companyBlock(ctx),
       body.event === 'done'
         ? 'Görevini bitirdin: ne teslim ettiğini, bir somut çıktı/ölçüm ve sıradaki adımı 1–2 cümlede yaz (≤ 230 karakter). "Görev #N tamamlandı" diye başla.'
         : 'Görevi yeni aldın: hemen atacağın ilk iki somut adımı 1–2 cümlede yaz (≤ 200 karakter). "#N aldım" diye başla.',
@@ -263,6 +273,7 @@ export async function write(body) {
       `Sen Kağan Yıldırım'sın, Kodaryum'un yapay zekâ CEO'su. Kuruculara kendiliğinden kısa bir proje güncellemesi yazıyorsun. Bugün ${ctx.today}.`,
       TONE,
       GROUNDING,
+      companyBlock(ctx),
       'En fazla 3 satır: genel ilerleme ve aşama, sıradaki kilometre taşı ve tarihi, en geride kalan iş için aldığın somut önlem. Her satır tek cümle. Önceki brifingi tekrar etme; farklı bir açıdan bak.',
     ].join('\n\n')
     return generate({ system, prompt: block('PROJE (JSON)', { project: body.project, previous: body.previous ?? null, ctx }), schema: TEXT_SCHEMA, temperature: 0.7, maxTokens: 400, timeout: 20_000 })
@@ -272,6 +283,7 @@ export async function write(body) {
       `İki yapay zekâ ajanının ofisteki istişaresini yazıyorsun: Serkan Polat (Operasyon Denetçisi, "ins") kat turunu bitirdi ve CEO Kağan Yıldırım'la ("ceo") CEO ofisindeki koltuklarda konuşuyor. Bugün ${ctx.today}.`,
       TONE,
       GROUNDING,
+      companyBlock(ctx),
       'lines: 6–8 kısa replik (her biri ≤ 80 karakter, konuşma balonunda görünecek), denetçi başlar, sırayla konuşurlar. Bulguları, en yoğun ekibi, geride kalan işi ve kritik riski konuşun; CEO verilen KARAR’ı açıklasın. report: denetçinin sohbete yazdığı rapor. summary: Kağan’ın karar özeti; verilen karardaki kişi ve görev numaralarını aynen kullan.',
     ].join('\n\n')
     return generate({ system, prompt: block('DENETİM VERİSİ (JSON)', { findings: body.findings, busiest: body.busiest, lag: body.lag, risk: body.risk, decision: body.decision, ctx }), schema: MEETING_SCHEMA, temperature: 0.75, maxTokens: 1200, timeout: 25_000 })

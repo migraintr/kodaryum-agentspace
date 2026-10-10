@@ -10,7 +10,7 @@ import { MONTHS } from '../../metrics.js'
 import { ChartCard } from '../charts.jsx'
 import { ICONS, alpha } from '../kit.jsx'
 import {
-  AccountingSection, BudgetBlock, CustomersSection, DeptSpecific, DeptTasks, FinanceSection, Grid, MarketingSection, OperationsSection, TeamList, TourLog,
+  AccountingSection, BudgetBlock, CustomersSection, DeptPrinciples, DeptSpecific, DeptTasks, FinanceSection, Grid, MarketingSection, OperationsSection, TeamList, TourLog,
 } from './sections.jsx'
 
 const TABS = [
@@ -154,6 +154,9 @@ function Board({ id }) {
                 <Grid>
                   <ChartCard title="Bütçe ve yapay zekâ kullanımı" subtitle={`Son ${n} ay harcama`}>
                     <BudgetBlock id={id} n={n} />
+                  </ChartCard>
+                  <ChartCard title="Çalışma prensipleri" subtitle="Şirket Kurulumu cevapları: odak, otonomi, kalite, kırmızı çizgiler">
+                    <DeptPrinciples id={id} />
                   </ChartCard>
                   <ChartCard title="Ekip" subtitle="Canlı görev durumu">
                     <TeamList id={id} />

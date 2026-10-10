@@ -9,7 +9,7 @@ import { DEPARTMENTS, DEPT_BY_ID, teamOf } from '../../data.js'
 import { HEALTH, agentTask, useStore } from '../../store.js'
 import { ChartCard } from '../charts.jsx'
 import { ICONS, alpha } from '../kit.jsx'
-import { BudgetBlock, DeptKeyChart, DeptTasks, KEY_CHART_TITLE, Kpis, TeamList, TourLog, deptKpis } from './sections.jsx'
+import { BudgetBlock, DeptKeyChart, DeptPrinciples, DeptTasks, KEY_CHART_TITLE, Kpis, TeamList, TourLog, deptKpis } from './sections.jsx'
 
 const VIZ = 'viz-scope'
 
@@ -103,6 +103,9 @@ function DeptSummary({ id, onFull }) {
         </ChartCard>
         <ChartCard title="Bütçe ve yapay zekâ kullanımı">
           <BudgetBlock id={id} chart={false} />
+        </ChartCard>
+        <ChartCard title="Çalışma prensipleri" subtitle="Şirket Kurulumu’ndan">
+          <DeptPrinciples id={id} />
         </ChartCard>
         <ChartCard title="Ekip" subtitle="Canlı görev durumu">
           <TeamList id={id} />

@@ -5,6 +5,7 @@ import {
   AGENTS, BOARDS, BOARD_BY_ID, CEO, CHAT_HISTORY, DEPT_BY_ID, PEOPLE, PERSON_BY_ID, PROJECTS, PROJECT_BY_ID, TASKS, USERS, USER_BY_ID,
 } from './data.js'
 import { aiAvailable, aiChat, aiWrite, buildContext } from './ai.js'
+import { rulesOf, useCompany } from './company/rules.js'
 
 export const HEALTH = {
   STABIL: { label: 'Stabil', color: '#34d399' },
@@ -57,7 +58,9 @@ const hit = (words, key) => {
 
 export function route(text) {
   const words = tokens(text)
-  return BOARDS.map((b) => ({ b, score: b.keywords.filter((k) => hit(words, k)).length + (hit(words, b.short) ? 2 : 0) }))
+  const R = rulesOf() // şirket kurulumu: kapalı departman görev almaz; odak alanları yönlendirmede ek anahtar kelimedir
+  return BOARDS.filter((b) => R.deptEnabled(b.id))
+    .map((b) => ({ b, score: b.keywords.filter((k) => hit(words, k)).length + R.extraKeywords(b.id).filter((k) => hit(words, k)).length + (hit(words, b.short) ? 2 : 0) }))
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
@@ -180,6 +183,16 @@ const initialUser = () => {
 // Ajanın üstündeki aktif görev sayısı (yeni görevler en az yüklü ajana gider)
 const loadOf = (tasks, personId) => tasks.filter((t) => t.status !== 'done' && (t.owner === personId || t.helpers.includes(personId))).length
 
+// Mesai kontrolü (şirket kuralı): gün ve saat aralığı
+const DAY = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt']
+function inHours({ start, end, days }) {
+  const n = new Date()
+  if (!days.includes(DAY[n.getDay()])) return false
+  const m = n.getHours() * 60 + n.getMinutes()
+  const [a, b] = [start, end].map((x) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3, 5)))
+  return a <= b ? m >= a && m < b : m >= a || m < b
+}
+
 export const deptOfTask = (t) => DEPT_BY_ID.get(PERSON_BY_ID.get(t.owner).dept)
 
 // İsme yönelme eki: son ünlüye göre -a/-e, ünlüyle bitiyorsa kaynaştırma -y- (Emre’ye, Okan’a)
@@ -199,7 +212,18 @@ function ceoSay(text, project, delegations = []) {
 // Her yerde aynı kural: önce Gemini (sunucu /api/ai/*), olmazsa/hata verirse eski yerel kural tabanlı metin.
 const clip = (v, n) => String(v ?? '').trim().slice(0, n)
 const ctxOf = (s) => buildContext(s, projectStats)
-const VIEW_OF = { projeler: 'projeler', gorevler: 'gorevler', departmanlar: 'departmanlar', ajanlar: 'ajanlar', pazarlama: 'pazarlama' }
+
+// Şirket kuralları (Şirket Kurulumu): onay biçimi ve departman otonomisi izin veriyorsa bekleyen plan görevleri onaysız başlar.
+// Döner: otomatik başlatılacak görev sayısı.
+function autoStartPending(urgent) {
+  const R = rulesOf()
+  const ok = useStore.getState().tasks.filter((t) => t.status === 'pending' && R.autoStart(deptOfTask(t).board, urgent)).map((t) => t.no)
+  if (!ok.length) return 0
+  later(() => useStore.getState().approve((t) => ok.includes(t.no)), 900)
+  useStore.getState().notify(`Şirket kuralı: ${ok.length} görev onay beklemeden başlıyor`, 'info')
+  return ok.length
+}
+const VIEW_OF = { projeler: 'projeler', gorevler: 'gorevler', departmanlar: 'departmanlar', ajanlar: 'ajanlar', pazarlama: 'pazarlama', sirket: 'sirket' }
 
 /** Ajanın sohbete düştüğü kısa iş güncellemesi (event: 'start' | 'done'); fallback: yerel metin */
 async function agentLine(event, t, fallback) {
@@ -254,6 +278,8 @@ function applyAiChat(d, userText, guessed) {
         priority: PRIORITY[d.priority] && d.priority !== 'normal' ? d.priority : s.priority,
         adaSays: 'Plan hazır!\nOnayınızı bekliyorum.',
       }))
+      const auto = autoStartPending(!!d.priority && d.priority !== 'normal')
+      if (auto) extra.autoStarted = auto
     }
   } else if (d.intent === 'report') {
     extra.kind = 'report'
@@ -337,6 +363,11 @@ export const useStore = create((set, get) => ({
   projectLeads: loadLeads(),
 
   setView: (view) => set({ view }),
+  // Şirket Kurulumu: çalışma mantığı formu (ofis üstünde açılır); section = form bölümü
+  openCompany: (section) => {
+    if (section) useCompany.getState().setSection(section)
+    set({ view: 'sirket', deptFull: null, navOpen: false })
+  },
   mktTab: null, // Pazarlama Merkezi açılırken gösterilecek sekme
   // Pazarlama Merkezi: ofis üstünde açılır (tam ekran pano ve oda paneli kapanır)
   openMkt: (tab) => set({ view: 'pazarlama', mktTab: tab ?? null, deptFull: null, navOpen: false }),
@@ -432,11 +463,16 @@ export const useStore = create((set, get) => ({
       const asked = ask ? (/ekip|yogun|yuk|departman/.test(q) ? '/ekip' : /risk|sorun/.test(q) ? '/risk' : /oncelik|takvim|ne zaman|hafta|tarih/.test(q) ? '/takvim' : /butce|maliyet|harcama/.test(q) ? '/butce' : '/durum') : null
       const c = cmd ?? asked
       // Pazarlama Merkezi kısayolları ("onay kutusu", "pazarlama planı"…)
+      const co = !cmd && /(sirket kurulumu|sirket mantigi|calisma prensipleri|ofis kurallari|sirket kurallari)/.test(q)
       const mk = !cmd && /(pazarlama merkezi|onay kutusu|icerik takvimi|icerik plani|pazarlama plani|pazarlama karnesi|haftalik rapor|patron raporu)/.exec(q)
       const targets = c ? [] : route(text)
       let reply
       const scope = s.chatProject !== 'all' ? [PROJECT_BY_ID.get(s.chatProject)] : PROJECTS
-      if (mk) {
+      if (co) {
+        set({ adaSays: 'Şirket Kurulumu\naçılıyor.' })
+        get().openCompany()
+        reply = { text: 'Şirket Kurulumu’nu açtım: şirketin çalışma mantığını (onaylar, yetkiler, departman otonomisi, tempo, raporlama) oradan belirleyip istediğiniz zaman değiştirebilirsiniz. Kaydedince ben ve ekip hemen yeni kurallara göre çalışırız.' }
+      } else if (mk) {
         const tab = /onay/.test(mk[1]) ? 'onay' : /takvim/.test(mk[1]) ? 'takvim' : /plan/.test(mk[1]) ? 'plan' : /karne/.test(mk[1]) ? 'karne' : /rapor/.test(mk[1]) ? 'sonuc' : 'bugun'
         set({ adaSays: 'Pazarlama Merkezi\naçılıyor.' })
         get().openMkt(tab)
@@ -476,10 +512,12 @@ export const useStore = create((set, get) => ({
           const ph = projectStats(s.tasks, project).phase
           pending.push({ no: no++, project, phase: ph, title: `${VERB[b.id]}: ${goal}`, owner: owner.id, helpers: [], progress: 0, status: 'pending', at: Date.now() })
         }
-        set((st) => ({ tasks: [...st.tasks.filter((t) => t.status !== 'pending'), ...pending], nextTaskNo: no, priority: urgent ? 'kritik' : st.priority, adaSays: 'Plan hazır!\nOnayınızı bekliyorum.' }))
+        const R = rulesOf()
+        set((st) => ({ tasks: [...st.tasks.filter((t) => t.status !== 'pending'), ...pending], nextTaskNo: no, priority: urgent ? 'kritik' : st.priority === 'normal' ? R.defaultPriority : st.priority, adaSays: 'Plan hazır!\nOnayınızı bekliyorum.' }))
+        const auto = autoStartPending(urgent)
         const names = pending.map((t) => PERSON_BY_ID.get(t.owner).name.toLocaleUpperCase('tr-TR'))
         reply = {
-          text: `Anlaşıldı${urgent ? ' — öncelik KRİTİK' : ''}! ${PROJECT_BY_ID.get(project).name} için hedefi ${pending.length} göreve böldüm: ${names.join(', ')}.\nOnaylarsanız hemen başlatıyorum.`,
+          text: `Anlaşıldı${urgent ? ' — öncelik KRİTİK' : ''}! ${PROJECT_BY_ID.get(project).name} için hedefi ${pending.length} göreve böldüm: ${names.join(', ')}.\n${auto ? `Şirket kurallarınız gereği ${auto === pending.length ? 'görevleri' : `${auto} görevi`} onay beklemeden başlatıyorum.${auto < pending.length ? ' Kalanlar için onayınızı bekliyorum.' : ''}` : 'Onaylarsanız hemen başlatıyorum.'}`,
           delegations: targets.map((b) => b.id),
           project,
         }
@@ -510,15 +548,15 @@ export const useStore = create((set, get) => ({
   },
 
   // "Onayla ve başlat": bekleyen planı yürütmeye alır, paketleri ajanlara uçurur
-  approve: () => {
-    const pending = get().tasks.filter((t) => t.status === 'pending')
+  approve: (filter) => {
+    const pending = get().tasks.filter((t) => t.status === 'pending' && (!filter || filter(t)))
     if (!pending.length) {
       get().notify('Onay bekleyen yeni plan yok — mevcut görevler yürütülüyor.')
       return
     }
     const flights = pending.map((t, i) => ({ id: ++flightSeq, taskNo: t.no, to: t.owner, color: deptOfTask(t).color, delay: i * 0.45 }))
     set((s) => ({
-      tasks: s.tasks.map((t) => (t.status === 'pending' ? { ...t, status: 'active', at: Date.now() } : t)),
+      tasks: s.tasks.map((t) => (t.status === 'pending' && (!filter || filter(t)) ? { ...t, status: 'active', at: Date.now() } : t)),
       flights: [...s.flights, ...flights],
       adaSays: 'Anlaşıldı! Görevleri\ndağıtıyorum...',
     }))
@@ -538,7 +576,9 @@ export const useStore = create((set, get) => ({
 
   // Canlı simülasyon: ekip metrikleri dalgalanır, görevler önceliğe göre ilerler ve tamamlanır
   tick: () => {
-    const speed = PRIORITY[get().priority].speed
+    const R = rulesOf()
+    if (R.pauseOutsideHours && !inHours(R.hours)) return // şirket kuralı: mesai dışında ofis durur
+    const speed = PRIORITY[get().priority].speed * R.tempo
     const finished = []
     set((s) => ({ ticks: s.ticks + 1 }))
     set((s) => {
@@ -556,7 +596,7 @@ export const useStore = create((set, get) => ({
       })
       const tasks = s.tasks.map((t) => {
         if (t.status !== 'active') return t
-        const progress = Math.min(100, t.progress + (0.12 + Math.random() * 0.45) * speed)
+        const progress = Math.min(100, t.progress + (0.12 + Math.random() * 0.45) * speed * R.deptSpeed(deptOfTask(t).board ?? 'yonetim'))
         if (progress >= 100) {
           finished.push(t)
           return { ...t, progress: 100, status: 'done' }
@@ -596,7 +636,7 @@ export const useStore = create((set, get) => ({
     })
     // Kağan'ın kendiliğinden proje güncellemesi (~45 sn'de bir)
     const st = get()
-    if (st.ticks - st.briefAt >= 18) {
+    if (st.ticks - st.briefAt >= R.briefTicks) {
       set({ briefAt: st.ticks })
       const pr = PROJECTS[Math.floor(st.ticks / 18) % PROJECTS.length]
       const ps = projectStats(st.tasks, pr.id)

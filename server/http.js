@@ -3,9 +3,11 @@
 //   POST /api/ai/ping     → kısa bağlantı testi
 //   POST /api/ai/chat     → Kağan'ın sohbet yanıtı
 //   POST /api/ai/write    → ajan güncellemesi / CEO brifingi / denetim istişaresi ({ kind })
+//   POST /api/ai/company  → Şirket kurulum formu önerileri ({ kind: 'suggest' })
 //   POST /api/ai/mkt      → Pazarlama modülü: içerik, denetim, plan, marka, yanıt ({ kind })
 import { aiStatus, chat, ping, rateLimit, write } from './ai.js'
 import { PROMPT_VERSION, mkt } from './mkt.js'
+import { company } from './company.js'
 
 const MAX_BODY = 256 * 1024
 
@@ -68,6 +70,7 @@ export function aiMiddleware() {
       if (route === 'chat') out = await chat(body)
       else if (route === 'write') out = await write(body)
       else if (route === 'mkt') out = await mkt(body)
+      else if (route === 'company') out = await company(body)
       else if (route === 'ping') out = await ping()
       else return send(res, 404, { error: 'Bilinmeyen uç nokta' })
       console.info(`[ai] ${route}${body.kind ? `/${body.kind}` : ''} · ${out.meta.model} · ${Date.now() - t0} ms · ${out.meta.inTokens}+${out.meta.outTokens} token${route === 'mkt' ? ` · ${PROMPT_VERSION}` : ''}`)

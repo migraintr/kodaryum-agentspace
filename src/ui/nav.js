@@ -1,7 +1,7 @@
 // Sol menü: gruplanmış öğeler; view: tıklanınca açılan ekran ('genel' = ofis). soon: henüz hazır olmayan modül.
 // Rozet sayıları Sidebar'da canlı hesaplanır.
 import {
-  BookOpen, Bot, BrainCircuit, ChartLine, FileChartColumn, Folder, FolderKanban, Globe, LayoutDashboard,
+  BookOpen, Building2, Bot, BrainCircuit, ChartLine, FileChartColumn, Folder, FolderKanban, Globe, LayoutDashboard,
   ListChecks, Megaphone, Network, Puzzle, Settings, SquareTerminal, Workflow,
 } from 'lucide-react'
 
@@ -13,6 +13,7 @@ export const NAV_GROUPS = [
       { label: 'Görevler', icon: ListChecks, view: 'gorevler' },
       { label: 'Projeler', icon: FolderKanban, view: 'projeler' },
       { label: 'Pazarlama Merkezi', icon: Megaphone, view: 'pazarlama' },
+      { label: 'Şirket Kurulumu', icon: Building2, view: 'sirket' },
     ],
   },
   {
