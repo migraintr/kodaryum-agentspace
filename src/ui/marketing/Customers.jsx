@@ -109,7 +109,9 @@ function WhatsApp() {
   const conv = convs.find((c) => c.id === id) ?? null
   const act = useMkt.getState()
   const handoffs = convs.filter((c) => c.handoff).length
-  useEffect(() => end.current?.scrollIntoView({ block: 'nearest' }), [conv?.msgs.length])
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'nearest' })
+  }, [conv?.msgs.length])
   const send = async (t = text) => {
     if (!t.trim()) return
     setBusy(true)

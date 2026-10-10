@@ -89,7 +89,9 @@ function Detail({ item, busy }) {
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const dirty = text !== v.text
-  useEffect(() => setText(v.text), [v.id, v.text])
+  useEffect(() => {
+    setText(v.text)
+  }, [v.id, v.text])
   const r = v.review
   const f = r?.findings
   const spec = FORMATS[item.format]

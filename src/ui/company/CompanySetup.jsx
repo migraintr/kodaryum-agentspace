@@ -36,7 +36,9 @@ export default function CompanySetup() {
   const base = history[0]?.snapshot
   const dirty = !same(profile, base ?? useCompany.getState().profile) || !onboarded
   const total = useMemo(() => progress(profile), [profile])
-  useEffect(() => scroller.current?.scrollTo({ top: 0 }), [section])
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 })
+  }, [section])
 
   const go = (d) => act.setSection(SECTIONS[Math.min(SECTIONS.length - 1, Math.max(0, idx + d))].id)
   const exportJson = () => {
@@ -287,7 +289,9 @@ function Debounced({ as: C, value, set, ...p }) {
   const t = useRef(null)
   const latest = useRef(set)
   latest.current = set
-  useEffect(() => setV(value ?? ''), [value])
+  useEffect(() => {
+    setV(value ?? '')
+  }, [value])
   useEffect(() => () => clearTimeout(t.current), [])
   const commit = (x) => latest.current(x === '' ? undefined : x)
   return <C value={v} onChange={(e) => { setV(e.target.value); clearTimeout(t.current); t.current = setTimeout(() => commit(e.target.value), 500) }} onBlur={() => { clearTimeout(t.current); if (v !== (value ?? '')) commit(v) }} {...p} />
