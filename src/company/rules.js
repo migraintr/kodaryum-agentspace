@@ -96,7 +96,14 @@ const BRIEF_TICKS = { sik: 10, normal: 18, seyrek: 42, kapali: Infinity }
 const AUTONOMY_ORDER = { oner: 0, hazirla: 1, uygula: 2 }
 
 /** Profilden uygulanacak kurallar. Cevap yoksa mevcut davranış (varsayılanlar) korunur. */
+let _memo = { p: null, r: null } // aynı profil nesnesi için sonucu yeniden kullan (tick ve yönlendirme sık çağırır)
 export function rulesOf(profile = useCompany.getState().profile) {
+  if (_memo.p === profile) return _memo.r
+  const r = computeRules(profile)
+  _memo = { p: profile, r }
+  return r
+}
+function computeRules(profile) {
   const approval = get(profile, 'ops.approval', 'her') // her | riskli | hic
   const depts = profile.depts ?? {}
   const w = (id) => ({ 1: 0.8, 2: 1, 3: 1.3 })[depts[id]?.weight ?? 2] ?? 1

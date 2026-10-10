@@ -6,10 +6,19 @@ import { FORMATS, SECTOR_BY_ID } from './domain.js'
 const FOLD = { ı: 'i', ş: 's', ğ: 'g', ü: 'u', ö: 'o', ç: 'c', â: 'a', î: 'i', û: 'u', İ: 'i' }
 export const fold = (t) => String(t ?? '').toLocaleLowerCase('tr-TR').replace(/[ıİşğüöçâîû]/g, (c) => FOLD[c] ?? c)
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const has = (text, phrase) => {
-  const f = fold(phrase).trim()
-  return new RegExp(`(^|[^a-z0-9])${esc(f)}${f.length <= 4 ? '(?![a-z0-9])' : ''}`).test(fold(text))
+// Performans: ifade başına derlenmiş RegExp önbelleği; metin tek kez katlanır (review içinde) — eskiden her ifade için yeniden derlenip metin yeniden katlanıyordu
+const RE = new Map()
+const reOf = (phrase) => {
+  let r = RE.get(phrase)
+  if (!r) {
+    const f = fold(phrase).trim()
+    r = { re: new RegExp(`(^|[^a-z0-9])${esc(f)}${f.length <= 4 ? '(?![a-z0-9])' : ''}`), f }
+    RE.set(phrase, r)
+  }
+  return r
 }
+const hasF = (folded, phrase) => reOf(phrase).re.test(folded)
+const has = (text, phrase) => hasF(fold(text), phrase)
 
 // Her markada geçerli kırmızı çizgiler (Bölüm 2): sahte yorum/takipçi, spam, rakip karalama, doğrulanamayan üstünlük
 const GLOBAL_BANNED = ['takipçi satın', 'yorum satın', 'sahte yorum', 'beğeni satın', 'bedava takipçi']
@@ -57,6 +66,7 @@ export function review(text, format, ctx = {}) {
   const sector = SECTOR_BY_ID[ctx.sectorId ?? brand.sector]
   const spec = FORMATS[format] ?? { limit: 2200, soft: 300 }
   const body = String(text ?? '')
+  const FB = fold(body) // katlanmış metin: bir kez
   const factText = fold((ctx.facts ?? []).join(' \n '))
   const allowedPrices = new Set([...(ctx.allowedPrices ?? []), ...amounts(factText)])
   const allowedPercents = new Set([...(ctx.allowedPercents ?? []), ...percents(factText)])
@@ -68,13 +78,13 @@ export function review(text, format, ctx = {}) {
 
   // 1) Yasaklı kelimeler: marka + sektör + genel
   const banned = [...new Set([...(brand.forbidden ?? []), ...(sector?.forbid ?? []), ...GLOBAL_BANNED].filter(Boolean))]
-  const forbidden_terms = banned.filter((b) => has(body, b))
+  const forbidden_terms = banned.filter((b) => hasF(FB, b))
   forbidden_terms.forEach((t) => high.push(`Yasaklı ifade: “${t}”`))
 
   // 2) Doğrulanmamış iddialar (marka hafızasındaki gerçeklerle eşleşmeyen)
   const unverified_claims = []
   for (const [p, reason] of SUPERLATIVES) {
-    if (has(body, p.trim()) && !factText.includes(fold(p.trim()))) unverified_claims.push({ text: p.trim(), reason: `${reason}: kanıtı gerçekler tablosunda yok` })
+    if (hasF(FB, p.trim()) && !factText.includes(reOf(p).f)) unverified_claims.push({ text: p.trim(), reason: `${reason}: kanıtı gerçekler tablosunda yok` })
   }
   for (const a of amounts(body)) {
     if (![...allowedPrices].some((p) => Math.abs(p - a) < 0.5)) unverified_claims.push({ text: `${a.toLocaleString('tr-TR')} ₺`, reason: 'Fiyat gerçekler tablosuyla eşleşmiyor' })
@@ -93,8 +103,8 @@ export function review(text, format, ctx = {}) {
 
   // 3) Yasal işaretler
   const legal_flags = []
-  if (COMPARE.some((c) => has(body, c))) legal_flags.push('comparative_claim')
-  if (HEALTH.some((h) => has(body, h))) legal_flags.push('health_claim')
+  if (COMPARE.some((c) => hasF(FB, c))) legal_flags.push('comparative_claim')
+  if (HEALTH.some((h) => hasF(FB, h))) legal_flags.push('health_claim')
   if (sector?.restricted && (amounts(body).length || percents(body).length || /indirim|kampanya|fırsat/i.test(body))) legal_flags.push('restricted_sector_promo')
   if (['wa_template', 'email'].includes(format) && !/(iptal|abonelikten|durdur|stop|listeden çık|ret\b)/i.test(body)) legal_flags.push('missing_opt_out')
   if (/%\s*\d+.*(indirim|iade)|(indirim|iade).*%\s*\d+/i.test(body) && !/(koşul|geçerli|tarih)/i.test(body) && format === 'ad_copy') legal_flags.push('discount_terms_missing')
@@ -116,7 +126,7 @@ export function review(text, format, ctx = {}) {
 
   // 4) Yazım ve ton
   const spelling = []
-  for (const [bad, good] of TYPOS) if (bad !== good && has(body, bad)) spelling.push(`${bad} → ${good}`)
+  for (const [bad, good] of TYPOS) if (bad !== good && hasF(FB, bad)) spelling.push(`${bad} → ${good}`)
   if (/ {2,}/.test(body)) spelling.push('Fazladan boşluk')
   if (/\s[,.;:!?]/.test(body)) spelling.push('Noktalama öncesi boşluk')
   if (/\b(\w{3,})\s+\1\b/i.test(body)) spelling.push('Tekrarlanan sözcük')
@@ -132,13 +142,13 @@ export function review(text, format, ctx = {}) {
     tone -= 0.15
     low.push('Aşırı ünlem')
   }
-  const smell = AI_SMELL.filter((p) => has(body, p))
+  const smell = AI_SMELL.filter((p) => hasF(FB, p))
   if (smell.length) {
     tone -= 0.12 * Math.min(smell.length, 3)
     smell.forEach((s) => mid.push(`“Yapay zekâ kokusu”: “${s}”`))
   }
-  const siz = (fold(body).match(/\b(siz|sizi|sizin|size)\b|(iniz|ınız|unuz|ünüz|yiniz|yınız)\b/g) ?? []).length
-  const sen = (fold(body).match(/\b(sen|seni|senin|sana)\b/g) ?? []).length
+  const siz = (FB.match(/\b(siz|sizi|sizin|size)\b|(iniz|ınız|unuz|ünüz|yiniz|yınız)\b/g) ?? []).length
+  const sen = (FB.match(/\b(sen|seni|senin|sana)\b/g) ?? []).length
   const pref = brand.tone?.address ?? 'siz'
   if ((pref === 'siz' && sen > 0) || (pref === 'sen' && siz > 1)) {
     tone -= 0.18
@@ -152,7 +162,8 @@ export function review(text, format, ctx = {}) {
   tone = Math.max(0, Math.round(tone * 100) / 100)
 
   const verdict = high.length ? 'blocked' : mid.length ? 'needs_fix' : 'passed'
-  const fixed = autoFix(body, { forbidden: banned, format })
+  const anyIssue = high.length || mid.length || low.length
+  const fixed = anyIssue ? autoFix(body, { forbidden: banned, format }) : { text: body, changes: [] }
   const explain = !high.length && !mid.length
     ? `İçerik marka kurallarına uygun görünüyor${low.length ? `; ${low.length} küçük yazım notu var` : ''}. Fiyat, tarih ve oran iddiaları gerçekler tablosuyla eşleşiyor.`
     : `${high.length ? `${high.length} engelleyici` : ''}${high.length && mid.length ? ' ve ' : ''}${mid.length ? `${mid.length} düzeltilmesi gereken` : ''} bulgu var: ${[...high, ...mid].slice(0, 3).join('; ')}. ${verdict === 'blocked' ? 'Bu hâliyle yayınlanamaz; önerilen düzeltmeyi uygulayın ya da metni değiştirin.' : 'Düzeltildikten sonra onaya sunulabilir.'}`
