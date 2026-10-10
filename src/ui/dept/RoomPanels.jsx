@@ -28,7 +28,7 @@ function RailItem({ id, active, onPick, compact }) {
   const Icon = ICONS[d.icon]
   if (compact)
     return (
-      <button type="button" onClick={onPick} aria-pressed={active} className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 text-[12px] font-semibold shadow-sm backdrop-blur" style={active ? { background: d.color, borderColor: d.color, color: '#fff' } : { background: 'var(--viz-surface)', borderColor: alpha(d.color, 0.4), color: d.color }}>
+      <button type="button" onClick={onPick} aria-pressed={active} className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 text-[12px] font-semibold shadow-sm" style={active ? { background: d.color, borderColor: d.color, color: '#fff' } : { background: 'var(--viz-surface)', borderColor: alpha(d.color, 0.4), color: d.color }}>
         <Icon size={14} /> {d.short}
       </button>
     )
@@ -182,7 +182,7 @@ export default function RoomPanels() {
       {show && (
         <motion.div key="panels" className={`${VIZ} pointer-events-none absolute inset-0 z-20`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
           {/* sol: departman listesi (geniş ekran) */}
-          <motion.nav ref={rail} aria-label="Departmanlar" initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -24, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }} className="pointer-events-auto absolute top-3 bottom-3 left-3 hidden w-[232px] flex-col overflow-hidden rounded-2xl border border-[var(--viz-border)] bg-[var(--viz-surface)]/95 shadow-xl backdrop-blur-xl lg:flex">
+          <motion.nav ref={rail} aria-label="Departmanlar" initial={{ x: -24, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -24, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }} className="pointer-events-auto absolute top-3 bottom-3 left-3 hidden w-[232px] flex-col overflow-hidden rounded-2xl border border-[var(--viz-border)] bg-[var(--viz-surface)]/95 shadow-xl lg:flex">
             <div className="flex items-center justify-between border-b border-[var(--viz-border)] px-3 py-2.5">
               <p className="text-[11px] font-bold tracking-[0.12em] text-[var(--viz-muted)] uppercase">Departmanlar</p>
               <button type="button" onClick={resetView} title="Genel görünüm (Esc)" className="flex h-7 cursor-pointer items-center gap-1 rounded-lg px-2 text-[11.5px] font-semibold text-[var(--viz-ink-2)] hover:bg-[var(--viz-hover)]">
@@ -206,7 +206,7 @@ export default function RoomPanels() {
           </div>
 
           {/* sağ: özet paneli (tablet ve üstü) */}
-          <motion.aside ref={panel} key={'p' + id} aria-label={`${DEPT_BY_ID.get(id).name} özeti`} initial={{ x: 28, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 28, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }} className="no-scrollbar pointer-events-auto absolute top-14 right-3 bottom-3 hidden w-[360px] overflow-y-auto rounded-2xl border border-[var(--viz-border)] bg-[var(--viz-plane)]/95 shadow-xl backdrop-blur-xl md:block lg:top-3 xl:w-[392px]">
+          <motion.aside ref={panel} key={'p' + id} aria-label={`${DEPT_BY_ID.get(id).name} özeti`} initial={{ x: 28, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 28, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 34 }} className="no-scrollbar pointer-events-auto absolute top-14 right-3 bottom-3 hidden w-[360px] overflow-y-auto rounded-2xl border border-[var(--viz-border)] bg-[var(--viz-plane)]/95 shadow-xl md:block lg:top-3 xl:w-[392px]">
             <DeptSummary id={id} onFull={onFull} />
           </motion.aside>
 

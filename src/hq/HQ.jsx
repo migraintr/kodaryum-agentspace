@@ -535,9 +535,12 @@ function Quality() {
 export default function HQ() {
   const dark = useStore((s) => s.theme === 'dark')
   const q = LEVELS[useQuality((s) => s.level)]
+  // Tam ekran pano ya da menü ekranı (Projeler, Pazarlama Merkezi, Şirket Kurulumu…) 3B ofisi kapatınca çizim durur: GPU/CPU boşa harcanmaz,
+  // üstteki buzlu cam (backdrop-blur) her karede yeniden bulanıklaştırılmaz. Sahne hazır olmadan asla durmaz (yükleme tamamlanmalı).
+  const paused = useStore((s) => s.sceneReady && (s.view !== 'genel' || !!s.deptFull))
   return (
     <div className="absolute inset-0">
-      <Canvas shadows dpr={q.dpr} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false, powerPreference: 'high-performance' }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
+      <Canvas shadows dpr={q.dpr} frameloop={paused ? 'never' : 'always'} camera={{ position: HOME.pos.toArray(), fov: 34, near: 0.5, far: 200 }} gl={{ antialias: false, powerPreference: 'high-performance' }} onPointerMissed={() => useStore.getState().roomId && useStore.getState().resetView()}>
         <color attach="background" args={[dark ? '#0d1117' : '#eef0f2']} />
         <Suspense fallback={null}>
           <Environment files={lobby} environmentIntensity={dark ? 0.25 : 0.75} />
