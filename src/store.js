@@ -423,23 +423,28 @@ export const useStore = create((set, get) => ({
     const local = () => {
       const s = get()
       const q = fold(text)
-      const targets = cmd ? [] : route(text)
+      // Soru / rapor istekleri iş atama sayılmaz ("Durum raporu", "Hangi ekip en yoğun?" görev üretmez)
+      const DO = /(hazirla|yap|yapil|gelistir|tasarla|baslat|olustur|arastir(?!ma)|yaz|kur|ekle|duzelt)/.test(q)
+      const ask = !cmd && !DO && (/\?\s*$/.test(text) || /^(hangi|kim|ne kadar|kac|nasil|neden|durum|rapor|ozet|brifing|bu hafta|oncelik)/.test(q))
+      const asked = ask ? (/ekip|yogun|yuk|departman/.test(q) ? '/ekip' : /risk|sorun/.test(q) ? '/risk' : /oncelik|takvim|ne zaman|hafta|tarih/.test(q) ? '/takvim' : /butce|maliyet|harcama/.test(q) ? '/butce' : '/durum') : null
+      const c = cmd ?? asked
+      const targets = c ? [] : route(text)
       let reply
       const scope = s.chatProject !== 'all' ? [PROJECT_BY_ID.get(s.chatProject)] : PROJECTS
-      if (cmd === '/risk') {
+      if (c === '/risk') {
         const rows = scope.flatMap((p) => p.risks.map((r) => `• [${LEVEL[r.level]}] ${p.short}: ${r.text} — ${PERSON_BY_ID.get(r.owner).name}`))
         reply = { text: rows.length ? `Açık riskler (${rows.length}):\n${rows.join('\n')}` : 'Açık risk yok.', project: s.chatProject !== 'all' ? s.chatProject : null }
-      } else if (cmd === '/takvim') {
+      } else if (c === '/takvim') {
         const rows = scope.flatMap((p) => p.milestones.filter((m) => !m.done).map((m) => ({ p, m }))).sort((a, b) => a.m.date.localeCompare(b.m.date))
         reply = { text: `Yaklaşan kilometre taşları:\n${rows.map(({ p, m }) => `• ${new Date(m.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} — ${p.short}: ${m.title}`).join('\n')}` }
-      } else if (cmd === '/ekip') {
+      } else if (c === '/ekip') {
         const rows = DEPARTMENTS_LOAD(s.tasks)
         reply = { text: `Departman iş yükü (aktif görev):\n${rows.map((r) => `• ${r.name}: ${r.n} görev · ${r.people} kişi`).join('\n')}` }
-      } else if (cmd === '/butce') {
+      } else if (c === '/butce') {
         reply = { text: `Bütçe durumu:\n${scope.map((p) => { const st = projectStats(s.tasks, p.id); return `• ${p.short}: ${tl(st.spent)} / ${tl(p.budget)} (%${Math.round((st.spent / p.budget) * 100)})` }).join('\n')}` }
-      } else if (cmd === '/yardim' || (cmd && !COMMANDS.some((c) => c.cmd === cmd))) {
+      } else if (c === '/yardim' || (c && !COMMANDS.some((x) => x.cmd === c))) {
         reply = { text: `Komutlar:\n${COMMANDS.map((c) => `${c.cmd} — ${c.desc}`).join('\n')}\nYa da doğrudan bir hedef yazın; ilgili ekipleri ben planlarım.` }
-      } else if (cmd === '/durum' || (!targets.length && /durum|ozet|rapor|brifing/.test(q))) {
+      } else if (c === '/durum' || (!targets.length && /durum|ozet|rapor|brifing/.test(q))) {
         set({ adaSays: `${PROJECTS.length} proje yürüyor,\nrapor hazır.` })
         reply = { kind: 'report', text: 'Anlık durum raporu hazır. Kritik yol: Çarşı ödeme entegrasyonu.', project: s.chatProject !== 'all' ? s.chatProject : null }
       } else if (!targets.length) {

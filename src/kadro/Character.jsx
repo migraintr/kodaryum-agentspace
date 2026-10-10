@@ -213,7 +213,8 @@ export default function Character({ look, action = 'idle', height = 1.75, speed 
     lod.current.meshes = []
     if (li?.ok)
       model.traverse((o) => {
-        const g = o.isSkinnedMesh && li.geo.get(o.name)
+        // saç kartları ve kirpik basitleştirilmez: düşük üçgenli ağda saç yok olur, kadınlar uzaktan erkek gibi görünür
+        const g = o.isSkinnedMesh && !/hair|lash/i.test(o.name) && li.geo.get(o.name)
         if (g) lod.current.meshes.push([o, o.geometry, g])
       })
     // Göz kırpma morfları (varsa): eyeBlinkLeft/Right ya da eyesClosed

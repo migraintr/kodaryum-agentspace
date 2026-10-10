@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="140" viewBox="0 0 120 140">
+  <defs>
+    <linearGradient id="pale" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3ebf6"/><stop offset="1" stop-color="#aec3df"/></linearGradient>
+    <linearGradient id="grey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1f5"/><stop offset="1" stop-color="#c3cbd6"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93d356"/><stop offset="1" stop-color="#4f9c2e"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8eb2df"/><stop offset="1" stop-color="#3d6aa7"/></linearGradient>
+    <linearGradient id="navy" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f5f9c"/><stop offset="1" stop-color="#16325b"/></linearGradient>
+  </defs>
+  <g stroke-linejoin="round">
+    <polygon points="50.00,24.00 86.37,45.00 86.37,87.00 50.00,108.00 13.63,87.00 13.63,45.00" fill="url(#pale)" stroke="url(#pale)" stroke-width="8" opacity="0.9"/>
+    <polygon points="50.00,24.00 86.37,45.00 86.37,87.00 50.00,108.00 13.63,87.00 13.63,45.00" fill="none" stroke="#ffffff" stroke-width="1.6" opacity="0.7"/>
+    <polygon points="89.00,54.00 108.92,65.50 108.92,88.50 89.00,100.00 69.08,88.50 69.08,65.50" fill="url(#grey)" stroke="url(#grey)" stroke-width="8"/>
+    <polygon points="85.00,18.00 105.78,30.00 105.78,54.00 85.00,66.00 64.22,54.00 64.22,30.00" fill="url(#green)" stroke="url(#green)" stroke-width="8"/>
+    <polygon points="53.00,47.00 85.04,65.50 85.04,102.50 53.00,121.00 20.96,102.50 20.96,65.50" fill="url(#blue)" stroke="url(#blue)" stroke-width="8" opacity="0.92"/>
+    <polygon points="62.00,36.00 94.04,54.50 94.04,91.50 62.00,110.00 29.96,91.50 29.96,54.50" fill="url(#navy)" stroke="url(#navy)" stroke-width="9"/>
+    <polygon points="62.00,39.50 91.01,56.25 91.01,89.75 62.00,106.50 32.99,89.75 32.99,56.25" fill="none" stroke="#6b9bd8" stroke-width="1.4" opacity="0.55"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="47.5,63 37.5,73 47.5,83"/>
+    <line x1="66" y1="59.5" x2="58" y2="86.5"/>
+    <polyline points="76.5,63 86.5,73 76.5,83"/>
+  </g>
+  <rect x="80" y="9.5" width="15" height="5.4" rx="2.7" fill="#f58220" transform="rotate(30 87.5 12.2)"/>
+  <rect x="62" y="128.5" width="15" height="5.4" rx="2.7" fill="#3f73b5" transform="rotate(30 69.5 131.2)"/>
+</svg>

@@ -1,0 +1,276 @@
+{
+ "scenes": [
+  {
+   "id": "intro",
+   "title": "Giriş",
+   "segs": [
+    {
+     "cap": "Kodaryum AgentSpace · Pazarlama Modülü: Strateji ve Ürün Planı"
+    },
+    {
+     "cap": "İşletmelerin en büyük sorunu olan pazarlamayı yapay zekâ ekibimizle nasıl çözeceğimizi adım adım anlatıyoruz."
+    }
+   ]
+  },
+  {
+   "id": "problem",
+   "title": "Problem",
+   "segs": [
+    {
+     "cap": "Her işletmenin ortak derdi: pazarlama işi çok, uzmanı pahalı, sonucu belirsiz."
+    },
+    {
+     "cap": "Küçük işletmede sahibi gönderileri gece kendisi hazırlıyor; çoğu zaman haftalarca sessizlik."
+    },
+    {
+     "cap": "Orta ölçekte küçük ekip her kanala yetişemiyor; büyük şirkette ajanslar ve onay zincirleri hızı kesiyor."
+    },
+    {
+     "cap": "Ajans pahalı ve yavaş, araçlar işi yine sahibine bırakıyor; reklamın ne getirdiği bilinmiyor."
+    },
+    {
+     "cap": "Mesajlara geç dönülüyor, müşteri rakibe gidiyor; eski müşteriye tekrar satış yapılmıyor."
+    }
+   ]
+  },
+  {
+   "id": "segment",
+   "title": "Kime satıyoruz?",
+   "segs": [
+    {
+     "cap": "Sorun aynı kökten geliyor; satın alma davranışı ise çok farklı."
+    },
+    {
+     "cap": "Küçük işletme: karar sahibinde; hızlı karar, net ve öngörülebilir fiyat."
+    },
+    {
+     "cap": "Orta ölçek: ekibi güçlendirme ve rapor. Büyük işletme: güvenlik, onay zinciri, entegrasyon."
+    },
+    {
+     "cap": "İlk satış: küçük ve orta ölçek. Büyük işletme ikinci dalga; mimari baştan kurumsala hazır."
+    }
+   ]
+  },
+  {
+   "id": "alternatives",
+   "title": "Neden biz?",
+   "segs": [
+    {
+     "cap": "Seçenekler: ajanslar, tasarım ve zamanlama araçları, platform panelleri, genel sohbet yapay zekâsı."
+    },
+    {
+     "cap": "Ortak eksik: ya pahalılar ya da düşünme ve üretme işini işletmeye bırakıyorlar."
+    },
+    {
+     "cap": "Farkımız: planlayan, üreten, yayınlayan, ölçen ve hatırlayan tek sistem; Türkçe ve yerel kanallarda güçlü."
+    }
+   ]
+  },
+  {
+   "id": "vision",
+   "title": "Vizyon",
+   "segs": [
+    {
+     "cap": "Araç değil, iş sonucu satıyoruz."
+    },
+    {
+     "cap": "Kodaryum Pazarlama: işletmenizin cebindeki pazarlama departmanı. Siz yalnızca onaylarsınız."
+    },
+    {
+     "cap": "Altı fark yaratıcı: sonuç odaklı · marka hafızası · onay-önce otopilot · yerel ve Türkçe · ekip hissi · ölçeğe hazır."
+    },
+    {
+     "cap": "Kırmızı çizgiler: sahte yorum, sahte takipçi, izinsiz mesaj ve yanıltıcı iddia yok."
+    }
+   ]
+  },
+  {
+   "id": "today",
+   "title": "Bugün neredeyiz?",
+   "segs": [
+    {
+     "cap": "Bugün: pazarlama odası, dört yapay zekâ çalışanı, görev akışı ve örnek verili pano."
+    },
+    {
+     "cap": "Eksikler: marka hafızası, içerik üretimi, onay kuyruğu, kanal bağlantıları, gerçek ölçüm."
+    },
+    {
+     "cap": "Demodan ürüne geçiş: kalıcı veritabanı, iş kuyruğu ve güvenli anahtar yönetimiyle gerçek bir arka uç."
+    }
+   ]
+  },
+  {
+   "id": "loop",
+   "title": "Operasyon döngüsü",
+   "segs": [
+    {
+     "cap": "Ürünün omurgası: yedi adımlı bir döngü."
+    },
+    {
+     "cap": "1 Anla → 2 Planla (30 günlük plan) → 3 Üret"
+    },
+    {
+     "cap": "4 Onayla (tek dokunuş) → 5 Yayınla (doğru kanal, doğru saat)"
+    },
+    {
+     "cap": "6 Ölç → 7 Öğren: döngü her hafta daha iyi döner."
+    },
+    {
+     "cap": "Güven kademeleri: 0 Öner · 1 Hazırla · 2 Onayla ve yayınla · 3 Sınırlar içinde otonom"
+    }
+   ]
+  },
+  {
+   "id": "modules",
+   "title": "12 modül",
+   "segs": [
+    {
+     "cap": "12 modül, dört katman: temel · üretim · yayın ve büyüme · ölçüm"
+    },
+    {
+     "cap": "M1 Marka hafızası: 15 dakikada işletmeyi tanır; ton, ürün, fiyat ve yasakları öğrenir."
+    },
+    {
+     "cap": "M4 İçerik fabrikası: brief → 3 varyant → Marka Koruyucu denetimi → onay kuyruğu"
+    },
+    {
+     "cap": "M6 Yerel SEO ve yorumlar: Google İşletme Profili, yorum toplama, akıllı yanıt."
+    },
+    {
+     "cap": "M7 Reklam otopilotu: sert bütçe tavanı; bütçe her zaman işletmenin kendi hesabında."
+    },
+    {
+     "cap": "M8 WhatsApp asistanı: 5 dakikada yanıt, randevu, takip ve izin kaydı.",
+     "extra": 2
+    },
+    {
+     "cap": "M9 Patron raporu: ne yaptık · ne kazandırdı · ne öğrendik · gelecek hafta"
+    }
+   ]
+  },
+  {
+   "id": "screen",
+   "title": "Pazarlama Merkezi",
+   "segs": [
+    {
+     "cap": "İşletme sahibinin ekranı: Pazarlama Merkezi."
+    },
+    {
+     "cap": "Solda bugünün 5 işi ve toplu onay · ortada içerik takvimi · sağda 30 günlük sonuçlar."
+    },
+    {
+     "cap": "İlk 15 dakikada: ilk 5 gönderi taslağı + ilk pazarlama karnesi."
+    }
+   ]
+  },
+  {
+   "id": "pricing",
+   "title": "Paketler",
+   "segs": [
+    {
+     "cap": "Üç paket: Başlangıç · Büyüme · Kurumsal"
+    },
+    {
+     "cap": "Fiyatlar hipotez; 10 pilotla test edilecek. Sabit ve öngörülebilir fiyat, reklam bütçesi ayrı."
+    }
+   ]
+  },
+  {
+   "id": "team",
+   "title": "Ekip ve mimari",
+   "segs": [
+    {
+     "cap": "Ekip sekiz role genişliyor; Kağan orkestratör."
+    },
+    {
+     "cap": "Hatice strateji · Emine içerik · Hüseyin sosyal · Merve reklam · + Yerel SEO, WhatsApp, Marka Koruyucu"
+    },
+    {
+     "cap": "Altyapı: Google Cloud · Gemini (Vertex AI) · PostgreSQL · iş kuyruğu · şifreli anahtar yönetimi"
+    }
+   ]
+  },
+  {
+   "id": "sectors",
+   "title": "Sektör kütüphanesi",
+   "segs": [
+    {
+     "cap": "Boş sayfa yok: 12 sektör için hazır kampanya kitapları + Türkiye özel gün takvimi.",
+     "extra": 4
+    }
+   ]
+  },
+  {
+   "id": "risk",
+   "title": "Uyum ve riskler",
+   "segs": [
+    {
+     "cap": "Uyum ürünün içinde: KVKK · İYS ve ileti izinleri · reklam kuralları · platform politikaları"
+    },
+    {
+     "cap": "En büyük risk: platform erişim onayları. Başvurular ilk 2 haftada + bağlantısız çalışan Yardımcı mod."
+    }
+   ]
+  },
+  {
+   "id": "gtm",
+   "title": "Pazara çıkış",
+   "segs": [
+    {
+     "cap": "İlk hedef: Instagram, Google Haritalar ve WhatsApp ile müşteri bulan 3–50 çalışanlı yerel işletmeler."
+    },
+    {
+     "cap": "Ücretsiz pazarlama karnesi: 2 dakikada puan; hem lead toplar hem ürünü gösterir."
+    },
+    {
+     "cap": "6 haftalık pilot · 10 işletme"
+    }
+   ]
+  },
+  {
+   "id": "roadmap",
+   "title": "Yol haritası",
+   "segs": [
+    {
+     "cap": "Yol haritası: beş faz"
+    },
+    {
+     "cap": "Keşif (2 hf) → MVP (8 hf) → Yerel + WhatsApp (8 hf) → Reklam (10 hf) → Kurumsal (12 hf)"
+    }
+   ]
+  },
+  {
+   "id": "metrics",
+   "title": "Ölçüm",
+   "segs": [
+    {
+     "cap": "Kuzey yıldızı: haftalık onaylanıp yayınlanan içerik + yanıtlanan lead sayısı."
+    },
+    {
+     "cap": "Brüt marj hedefi ≥ %70; yapay zekâ maliyeti pilotlarda gerçek veriyle ölçülecek."
+    }
+   ]
+  },
+  {
+   "id": "next",
+   "title": "İlk adım",
+   "segs": [
+    {
+     "cap": "Bu hafta: 10 görüşme · platform başvuruları · pazarlama karnesi prototipi · kararlar"
+    },
+    {
+     "cap": "Kodaryum Pazarlama — işletmenizin cebindeki pazarlama departmanı."
+    }
+   ]
+  }
+ ],
+ "timing": {
+  "perWord": 0.46,
+  "base": 2.6,
+  "min": 5.0,
+  "max": 11.0,
+  "sceneGap": 1.2,
+  "lead": 0.6,
+  "tail": 4.0
+ }
+}
